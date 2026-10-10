@@ -22,7 +22,7 @@ export default function Admin() {
     e.preventDefault();
     setLoginError('');
     try {
-      const res = await fetch('http://localhost:3001/api/login', {
+      const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(loginForm)
@@ -70,10 +70,10 @@ export default function Admin() {
     const data = new FormData();
     data.append('image', file);
     try {
-      const res = await fetch('http://localhost:3001/api/upload', { method: 'POST', body: data });
+      const res = await fetch('/api/upload', { method: 'POST', body: data });
       const result = await res.json();
       if (result.success) {
-        setProfileForm(prev => ({ ...prev, image: `http://localhost:3001${result.url}` }));
+        setProfileForm(prev => ({ ...prev, image: `${result.url}` }));
       }
     } catch (err) {
       console.error("Upload failed", err);
@@ -654,7 +654,7 @@ function PropertiesView({ properties, addProperty, removeProperty, updatePropert
     data.append('image', file);
 
     try {
-      const res = await fetch('http://localhost:3001/api/upload', {
+      const res = await fetch('/api/upload', {
         method: 'POST',
         body: data,
       });
@@ -663,7 +663,7 @@ function PropertiesView({ properties, addProperty, removeProperty, updatePropert
         // Backend returns URL starting with /uploads/ which is served by Express
         // But our React app runs on Vite proxy or we need full URL.
         // Let's use the full URL to be safe, or assume proxy works.
-        setFormData(prev => ({ ...prev, image: `http://localhost:3001${result.url}` }));
+        setFormData(prev => ({ ...prev, image: `${result.url}` }));
       }
     } catch (err) {
       console.error("Upload failed", err);
@@ -969,7 +969,7 @@ function RoomsView({ properties, rooms, addRoomType, removeRoomType, updateRoomT
         const formData = new FormData();
         formData.append('image', file);
         
-        const res = await fetch('http://localhost:3001/api/upload', {
+        const res = await fetch('/api/upload', {
           method: 'POST',
           body: formData
         });
@@ -1134,7 +1134,7 @@ function RoomsView({ properties, rooms, addRoomType, removeRoomType, updateRoomT
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
                   {roomForm.images && roomForm.images.map((img, idx) => (
                     <div key={idx} style={{ position: 'relative', width: 80, height: 80, borderRadius: 8, overflow: 'hidden', border: '1px solid #E5E7EB' }}>
-                      <img src={`http://localhost:3000${img}`} alt="Room preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={`${img}`} alt="Room preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <button type="button" onClick={() => removeImage(idx)} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={12} /></button>
                     </div>
                   ))}
@@ -1423,7 +1423,7 @@ function AdminCredentialsForm() {
     setStatus({ type: '', message: '' });
 
     try {
-      const res = await fetch('http://localhost:3001/api/admin/credentials', {
+      const res = await fetch('/api/admin/credentials', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)

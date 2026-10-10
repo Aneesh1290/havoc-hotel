@@ -245,6 +245,16 @@ app.delete('/api/bookings/:id', (req, res) => {
   }
 });
 
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+// Serve the React frontend in production
+app.use(express.static(path.join(process.cwd(), 'dist')));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

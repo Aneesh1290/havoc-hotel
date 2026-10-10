@@ -191,7 +191,7 @@ export default function Booking() {
                   {/* Room Image */}
                   <div className="booking-room-image" style={{ width: 220, backgroundColor: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', overflow: 'hidden' }}>
                     {room.images && room.images.length > 0 ? (
-                      <img src={`http://localhost:3000${room.images[0]}`} alt={room.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={`${room.images[0]}`} alt={room.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <img src="/images/property_1.jpg" alt={room.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     )}
