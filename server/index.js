@@ -14,7 +14,8 @@ app.use(cors());
 app.use(express.json());
 
 // Ensure uploads directory exists
-const uploadsDir = path.join(process.cwd(), 'uploads');
+const dataDir = process.env.DATA_DIR || process.cwd();
+const uploadsDir = path.join(dataDir, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -245,13 +246,10 @@ app.delete('/api/bookings/:id', (req, res) => {
   }
 });
 
-// Serve static files from the uploads directory
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-
 // Serve the React frontend in production
 app.use(express.static(path.join(process.cwd(), 'dist')));
 
-app.get('*', (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
 });
 

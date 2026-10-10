@@ -5,9 +5,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Using a local file for SQLite. In Render with a persistent disk, 
-// you would point this to the mounted disk path (e.g. '/data/database.sqlite')
-const dbPath = path.join(__dirname, 'database.sqlite');
+// Support persistent disk via DATA_DIR environment variable
+const dataDir = process.env.DATA_DIR || __dirname;
+const dbPath = path.join(dataDir, 'database.sqlite');
 const db = new Database(dbPath);
 
 // Initialize Schema
