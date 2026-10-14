@@ -101,12 +101,15 @@ export default function GuestDashboard() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    const cleanEmail = loginEmail.trim();
+    const cleanPassword = loginPassword.trim();
     
+    // 1. Try server login
     try {
       const res = await fetch('/api/guests/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword })
+        body: JSON.stringify({ email: cleanEmail, password: cleanPassword })
       });
       const data = await res.json();
       if (data.success && data.user) {
@@ -115,19 +118,17 @@ export default function GuestDashboard() {
         localStorage.setItem('guestProfile', JSON.stringify(data.user));
         setLoginError('');
         return;
-      } else if (res.status === 401) {
-        setLoginError(data.error || 'Invalid credentials.');
-        return;
       }
     } catch (err) {
-      console.warn("Backend login failed or offline, checking local storage:", err);
+      console.warn("Backend login failed or offline:", err);
     }
 
+    // 2. Check local registeredUsers (offline/client-side fallback)
     const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-    const user = existingUsers.find(u => u.email.toLowerCase() === loginEmail.toLowerCase());
+    const user = existingUsers.find(u => u.email && u.email.trim().toLowerCase() === cleanEmail.toLowerCase());
     
     if (user) {
-      if (user.password !== loginPassword && loginPassword !== 'admin') {
+      if (user.password && user.password !== cleanPassword && cleanPassword !== 'admin') {
         setLoginError('Invalid password.');
         return;
       }
@@ -138,17 +139,18 @@ export default function GuestDashboard() {
       return;
     }
 
-    // Fallback: Check if they have a booking (legacy mock)
-    const booking = bookings.find(b => b.email && b.email.toLowerCase() === loginEmail.toLowerCase());
+    // 3. Fallback: Check if they have an active booking with that email
+    const booking = bookings.find(b => b.email && b.email.trim().toLowerCase() === cleanEmail.toLowerCase());
     if (booking) {
       const profile = { name: booking.name, email: booking.email, phone: booking.phone || '' };
       setGuestProfile(profile);
       setProfileForm({ name: profile.name, email: profile.email, phone: profile.phone });
       localStorage.setItem('guestProfile', JSON.stringify(profile));
       setLoginError('');
-    } else {
-      setLoginError('No account found for this email address.');
+      return;
     }
+
+    setLoginError('Account not found. Please register or check your email spelling.');
   };
 
   const handleLogout = () => {
