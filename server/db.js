@@ -91,6 +91,18 @@ if (!getSetting.get('offersEnabled')) {
 if (!getSetting.get('taxRate')) {
   db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('taxRate', '18');
 }
+if (!getSetting.get('guestCanCancel')) {
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('guestCanCancel', 'true');
+}
+if (!getSetting.get('guestCanReschedule')) {
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('guestCanReschedule', 'true');
+}
+if (!getSetting.get('cancellationNoticeHours')) {
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('cancellationNoticeHours', '24');
+}
+if (!getSetting.get('rescheduleNoticeHours')) {
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('rescheduleNoticeHours', '24');
+}
 
 try {
   db.exec("ALTER TABLE room_types ADD COLUMN images TEXT DEFAULT '[]'");

@@ -50,6 +50,41 @@ export const HotelProvider = ({ children }) => {
     }
   };
 
+  // Guest Booking Policies
+  const [bookingPolicies, setBookingPolicies] = useState(() => {
+    const saved = localStorage.getItem('guestBookingPolicies');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      guestCanCancel: true,
+      guestCanReschedule: true,
+      cancellationNoticeHours: 24,
+      rescheduleNoticeHours: 24
+    };
+  });
+
+  const updateBookingPolicies = async (updatedFields) => {
+    const newPolicies = { ...bookingPolicies, ...updatedFields };
+    setBookingPolicies(newPolicies);
+    localStorage.setItem('guestBookingPolicies', JSON.stringify(newPolicies));
+    try {
+      await Promise.all(
+        Object.entries(updatedFields).map(([key, value]) =>
+          fetch(`${API_URL}/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key, value })
+          })
+        )
+      );
+    } catch (err) {
+      console.error("Failed to sync booking policies:", err);
+    }
+  };
+
   const [offers, setOffers] = useState(() => {
     const saved = localStorage.getItem('hotelOffers');
     if (saved) return JSON.parse(saved);
@@ -121,6 +156,14 @@ export const HotelProvider = ({ children }) => {
             setTaxRate(parseFloat(settingsData.taxRate));
             localStorage.setItem('hotelTaxRate', settingsData.taxRate);
           }
+          const loadedPolicies = {
+            guestCanCancel: settingsData.guestCanCancel !== undefined ? (settingsData.guestCanCancel === true || settingsData.guestCanCancel === 'true') : true,
+            guestCanReschedule: settingsData.guestCanReschedule !== undefined ? (settingsData.guestCanReschedule === true || settingsData.guestCanReschedule === 'true') : true,
+            cancellationNoticeHours: settingsData.cancellationNoticeHours !== undefined ? Number(settingsData.cancellationNoticeHours) : 24,
+            rescheduleNoticeHours: settingsData.rescheduleNoticeHours !== undefined ? Number(settingsData.rescheduleNoticeHours) : 24
+          };
+          setBookingPolicies(loadedPolicies);
+          localStorage.setItem('guestBookingPolicies', JSON.stringify(loadedPolicies));
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -264,6 +307,7 @@ export const HotelProvider = ({ children }) => {
       inventoryAlerts, setInventoryAlerts,
       taxRate, updateTaxRate,
       offersEnabled, toggleOffers, offers, addOffer, removeOffer,
+      bookingPolicies, updateBookingPolicies,
       loading
     }}>
       {children}

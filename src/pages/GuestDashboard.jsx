@@ -4,12 +4,12 @@ import { Link } from 'react-router-dom';
 import { 
   CalendarDays, MapPin, User, LogOut, Heart, Award, ArrowRight, 
   BedDouble, Check, Eye, EyeOff, ChevronDown, Calendar, X, 
-  Download, AlertTriangle, Clock, RefreshCw, MessageSquare
+  Download, AlertTriangle, Clock, RefreshCw, MessageSquare, Info
 } from 'lucide-react';
-import { format, parseISO, differenceInDays } from 'date-fns';
+import { format, parseISO, differenceInDays, differenceInHours } from 'date-fns';
 
 export default function GuestDashboard() {
-  const { bookings, properties, updateBooking } = useHotels();
+  const { bookings, properties, updateBooking, bookingPolicies } = useHotels();
   const [activeTab, setActiveTab] = useState('bookings');
   const [guestProfile, setGuestProfile] = useState(() => {
     const saved = localStorage.getItem('guestProfile');
@@ -177,6 +177,18 @@ export default function GuestDashboard() {
       setActionError("Check-out date must be strictly after Check-in date.");
       return;
     }
+
+    // Policy check
+    if (bookingPolicies?.guestCanReschedule === false) {
+      setActionError("Online rescheduling is currently disabled. Please contact the front desk.");
+      return;
+    }
+    const noticeHours = bookingPolicies?.rescheduleNoticeHours ?? 24;
+    const hoursToCheckIn = differenceInHours(parseISO(selectedBooking.checkIn), new Date());
+    if (hoursToCheckIn < noticeHours) {
+      setActionError(`Dates can only be modified at least ${noticeHours} hours before check-in. Please contact our reception.`);
+      return;
+    }
     
     setIsActionLoading(true);
     setActionError('');
@@ -213,6 +225,19 @@ export default function GuestDashboard() {
       setActionError("This booking is already cancelled.");
       return;
     }
+
+    // Policy check
+    if (bookingPolicies?.guestCanCancel === false) {
+      setActionError("Online cancellations are currently disabled. Please contact property support.");
+      return;
+    }
+    const noticeHours = bookingPolicies?.cancellationNoticeHours ?? 24;
+    const hoursToCheckIn = differenceInHours(parseISO(selectedBooking.checkIn), new Date());
+    if (hoursToCheckIn < noticeHours) {
+      setActionError(`Cancellations are only permitted up to ${noticeHours} hours prior to scheduled check-in. Please contact the front desk.`);
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to cancel this reservation?")) return;
 
     setIsActionLoading(true);
@@ -680,7 +705,7 @@ export default function GuestDashboard() {
                           </div>
                         )}
                         
-                        <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+                        <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                           <button 
                             onClick={() => handleDownloadInvoice(b)}
                             style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #D1D5DB', backgroundColor: 'white', color: '#374151', fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9rem' }}
@@ -697,19 +722,53 @@ export default function GuestDashboard() {
                                 <MessageSquare size={16} /> Special Requests
                               </button>
                               
-                              <button 
-                                onClick={() => openManageModal(b, 'dates')}
-                                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #3B82F6', backgroundColor: '#EFF6FF', color: '#1D4ED8', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9rem' }}
-                              >
-                                <RefreshCw size={16} /> Change Dates
-                              </button>
+                              {/* Change Dates Button (Controlled by Admin Policy) */}
+                              {bookingPolicies?.guestCanReschedule !== false && (() => {
+                                const noticeHours = bookingPolicies?.rescheduleNoticeHours ?? 24;
+                                const hoursLeft = differenceInHours(parseISO(b.checkIn), new Date());
+                                const canReschedule = hoursLeft >= noticeHours;
 
-                              <button 
-                                onClick={() => openManageModal(b, 'cancel')}
-                                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #FCA5A5', backgroundColor: '#FEF2F2', color: '#DC2626', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9rem' }}
-                              >
-                                <AlertTriangle size={16} /> Cancel Stay
-                              </button>
+                                return canReschedule ? (
+                                  <button 
+                                    onClick={() => openManageModal(b, 'dates')}
+                                    style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #3B82F6', backgroundColor: '#EFF6FF', color: '#1D4ED8', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9rem' }}
+                                  >
+                                    <RefreshCw size={16} /> Change Dates
+                                  </button>
+                                ) : (
+                                  <button 
+                                    disabled
+                                    title={`Date modifications must be requested at least ${noticeHours}h before check-in. Contact reception for assistance.`}
+                                    style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #E5E7EB', backgroundColor: '#F3F4F6', color: '#9CA3AF', fontWeight: 500, cursor: 'not-allowed', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9rem' }}
+                                  >
+                                    <Clock size={16} /> Reschedule Locked ({noticeHours}h notice)
+                                  </button>
+                                );
+                              })()}
+
+                              {/* Cancel Stay Button (Controlled by Admin Policy) */}
+                              {bookingPolicies?.guestCanCancel !== false && (() => {
+                                const noticeHours = bookingPolicies?.cancellationNoticeHours ?? 24;
+                                const hoursLeft = differenceInHours(parseISO(b.checkIn), new Date());
+                                const canCancel = hoursLeft >= noticeHours;
+
+                                return canCancel ? (
+                                  <button 
+                                    onClick={() => openManageModal(b, 'cancel')}
+                                    style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #FCA5A5', backgroundColor: '#FEF2F2', color: '#DC2626', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9rem' }}
+                                  >
+                                    <AlertTriangle size={16} /> Cancel Stay
+                                  </button>
+                                ) : (
+                                  <button 
+                                    disabled
+                                    title={`Cancellations must be made at least ${noticeHours}h before check-in. Please contact the front desk.`}
+                                    style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #E5E7EB', backgroundColor: '#F3F4F6', color: '#9CA3AF', fontWeight: 500, cursor: 'not-allowed', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9rem' }}
+                                  >
+                                    <Clock size={16} /> Cancel Locked ({noticeHours}h notice)
+                                  </button>
+                                );
+                              })()}
                             </>
                           )}
                         </div>
@@ -790,24 +849,28 @@ export default function GuestDashboard() {
 
             {/* Modal Navigation Tabs */}
             <div style={{ display: 'flex', borderBottom: '1px solid #E5E7EB', backgroundColor: 'white' }}>
-              <button 
-                onClick={() => { setManageTab('dates'); setActionSuccess(''); setActionError(''); }}
-                style={{ flex: 1, padding: '14px', border: 'none', background: 'none', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', color: manageTab === 'dates' ? 'var(--primary)' : '#6B7280', borderBottom: manageTab === 'dates' ? '2px solid var(--primary)' : '2px solid transparent' }}
-              >
-                Reschedule Dates
-              </button>
+              {bookingPolicies?.guestCanReschedule !== false && (
+                <button 
+                  onClick={() => { setManageTab('dates'); setActionSuccess(''); setActionError(''); }}
+                  style={{ flex: 1, padding: '14px', border: 'none', background: 'none', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', color: manageTab === 'dates' ? 'var(--primary)' : '#6B7280', borderBottom: manageTab === 'dates' ? '2px solid var(--primary)' : '2px solid transparent' }}
+                >
+                  Reschedule Dates
+                </button>
+              )}
               <button 
                 onClick={() => { setManageTab('requests'); setActionSuccess(''); setActionError(''); }}
                 style={{ flex: 1, padding: '14px', border: 'none', background: 'none', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', color: manageTab === 'requests' ? 'var(--primary)' : '#6B7280', borderBottom: manageTab === 'requests' ? '2px solid var(--primary)' : '2px solid transparent' }}
               >
                 Special Requests
               </button>
-              <button 
-                onClick={() => { setManageTab('cancel'); setActionSuccess(''); setActionError(''); }}
-                style={{ flex: 1, padding: '14px', border: 'none', background: 'none', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', color: manageTab === 'cancel' ? '#EF4444' : '#6B7280', borderBottom: manageTab === 'cancel' ? '2px solid #EF4444' : '2px solid transparent' }}
-              >
-                Cancel Booking
-              </button>
+              {bookingPolicies?.guestCanCancel !== false && (
+                <button 
+                  onClick={() => { setManageTab('cancel'); setActionSuccess(''); setActionError(''); }}
+                  style={{ flex: 1, padding: '14px', border: 'none', background: 'none', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', color: manageTab === 'cancel' ? '#EF4444' : '#6B7280', borderBottom: manageTab === 'cancel' ? '2px solid #EF4444' : '2px solid transparent' }}
+                >
+                  Cancel Booking
+                </button>
+              )}
             </div>
 
             {/* Modal Body */}
@@ -826,7 +889,7 @@ export default function GuestDashboard() {
               {manageTab === 'dates' && (
                 <form onSubmit={handleDateChange}>
                   <p style={{ fontSize: '0.9rem', color: '#4B5563', margin: '0 0 20px' }}>
-                    Select new check-in and check-out dates. Total pricing will automatically adjust according to the number of nights.
+                    Select new check-in and check-out dates. Total pricing will automatically adjust according to the number of nights. Date changes must be made at least {bookingPolicies?.rescheduleNoticeHours ?? 24} hours before check-in.
                   </p>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
@@ -894,7 +957,7 @@ export default function GuestDashboard() {
                       <AlertTriangle size={18} /> Cancellation Policy
                     </div>
                     <p style={{ color: '#7F1D1D', fontSize: '0.85rem', margin: 0 }}>
-                      Free cancellation is permitted up to 24 hours prior to check-in. Once cancelled, your booked room units will be released back into inventory.
+                      Free cancellation is permitted up to {bookingPolicies?.cancellationNoticeHours ?? 24} hours prior to scheduled check-in. Once cancelled, your booked room units will be released back into inventory.
                     </p>
                   </div>
 

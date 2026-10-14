@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useHotels } from '../context/HotelContext';
 import { Link } from 'react-router-dom';
 import { 
   Mountain, LayoutDashboard, CalendarDays, Building2, BedDouble, 
   Archive, Users, CreditCard, FileText, Tag, Image as ImageIcon, 
   Settings, Search, Bell, Plus, Headset, CalendarCheck, Wallet, 
-  PieChart, Users as UsersIcon, ArrowRight, MapPin, Edit2, Trash2, Check, X, MoreVertical
+  PieChart, Users as UsersIcon, ArrowRight, MapPin, Edit2, Trash2, Check, X, MoreVertical,
+  Clock, CheckCircle
 } from 'lucide-react';
 import { format, isSameDay, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
 
@@ -1503,21 +1504,48 @@ function AdminCredentialsForm() {
 }
 
 function SettingsView() {
-  const { taxRate, updateTaxRate } = useHotels();
+  const { taxRate, updateTaxRate, bookingPolicies, updateBookingPolicies } = useHotels();
   const [localTaxRate, setLocalTaxRate] = useState(taxRate);
+  
+  const [localPolicies, setLocalPolicies] = useState({
+    guestCanCancel: bookingPolicies?.guestCanCancel ?? true,
+    guestCanReschedule: bookingPolicies?.guestCanReschedule ?? true,
+    cancellationNoticeHours: bookingPolicies?.cancellationNoticeHours ?? 24,
+    rescheduleNoticeHours: bookingPolicies?.rescheduleNoticeHours ?? 24
+  });
+
+  const [policySaved, setPolicySaved] = useState(false);
+
+  useEffect(() => {
+    if (bookingPolicies) {
+      setLocalPolicies({
+        guestCanCancel: bookingPolicies.guestCanCancel ?? true,
+        guestCanReschedule: bookingPolicies.guestCanReschedule ?? true,
+        cancellationNoticeHours: bookingPolicies.cancellationNoticeHours ?? 24,
+        rescheduleNoticeHours: bookingPolicies.rescheduleNoticeHours ?? 24
+      });
+    }
+  }, [bookingPolicies]);
 
   const handleSave = () => {
     updateTaxRate(localTaxRate);
-    alert('Settings saved successfully!');
+    alert('General settings saved successfully!');
+  };
+
+  const handleSavePolicies = async () => {
+    await updateBookingPolicies(localPolicies);
+    setPolicySaved(true);
+    setTimeout(() => setPolicySaved(false), 3000);
   };
 
   return (
     <>
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: '1.8rem', fontWeight: 600, color: '#111827', marginBottom: 4 }}>System Settings</h1>
-        <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>Configure global application preferences.</p>
+        <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>Configure global application preferences, taxes, and guest self-service policies.</p>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 32 }}>
+        {/* General Settings */}
         <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 32 }}>
           <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#111827', marginBottom: 24 }}>General Settings</h3>
           <div style={{ marginBottom: 24 }}>
@@ -1536,6 +1564,135 @@ function SettingsView() {
             <input type="number" step="0.1" value={localTaxRate} onChange={e => setLocalTaxRate(parseFloat(e.target.value) || 0)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB' }} />
           </div>
           <button onClick={handleSave} style={{ backgroundColor: '#0A192F', color: 'white', padding: '10px 24px', border: 'none', borderRadius: 8, fontWeight: 500, cursor: 'pointer' }}>Save General Settings</button>
+        </div>
+
+        {/* Guest Booking Policies */}
+        <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#111827', margin: 0 }}>Guest Booking Policies</h3>
+              <p style={{ color: '#6B7280', fontSize: '0.85rem', marginTop: 4 }}>Control guest permissions for cancelling & rescheduling stays.</p>
+            </div>
+            <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
+              <Clock size={20} />
+            </div>
+          </div>
+
+          {policySaved && (
+            <div style={{ padding: '10px 14px', borderRadius: 8, backgroundColor: '#ECFDF5', color: '#065F46', marginBottom: 20, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <CheckCircle size={16} /> Policies updated and saved successfully!
+            </div>
+          )}
+
+          {/* Cancellation Control */}
+          <div style={{ padding: '16px', borderRadius: 12, backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div>
+                <span style={{ fontWeight: 600, color: '#111827', fontSize: '0.95rem' }}>Allow Online Cancellations</span>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#6B7280' }}>Show "Cancel Stay" button to guests in their dashboard</p>
+              </div>
+              <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={localPolicies.guestCanCancel}
+                  onChange={e => setLocalPolicies(prev => ({ ...prev, guestCanCancel: e.target.checked }))}
+                  style={{ opacity: 0, width: 0, height: 0 }}
+                />
+                <span style={{
+                  position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                  backgroundColor: localPolicies.guestCanCancel ? '#10B981' : '#D1D5DB',
+                  borderRadius: 24, transition: '.3s'
+                }}>
+                  <span style={{
+                    position: 'absolute', content: '""', height: 18, width: 18, left: 3, bottom: 3,
+                    backgroundColor: 'white', borderRadius: '50%', transition: '.3s',
+                    transform: localPolicies.guestCanCancel ? 'translateX(20px)' : 'translateX(0)'
+                  }} />
+                </span>
+              </label>
+            </div>
+
+            {localPolicies.guestCanCancel && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #E5E7EB' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                  Prior Cancellation Notice Window (Hours before Check-in)
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input 
+                    type="number" 
+                    min="0"
+                    step="1"
+                    value={localPolicies.cancellationNoticeHours}
+                    onChange={e => setLocalPolicies(prev => ({ ...prev, cancellationNoticeHours: Math.max(0, parseInt(e.target.value) || 0) }))}
+                    style={{ width: '110px', padding: '8px 12px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.95rem' }}
+                  />
+                  <span style={{ fontSize: '0.85rem', color: '#6B7280' }}>
+                    hours before check-in ({Math.floor(localPolicies.cancellationNoticeHours / 24)}d {localPolicies.cancellationNoticeHours % 24}h)
+                  </span>
+                </div>
+                <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#9CA3AF' }}>
+                  Guests can only self-cancel if check-in is at least {localPolicies.cancellationNoticeHours} hours away.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Reschedule Control */}
+          <div style={{ padding: '16px', borderRadius: 12, backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div>
+                <span style={{ fontWeight: 600, color: '#111827', fontSize: '0.95rem' }}>Allow Changing Dates</span>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#6B7280' }}>Show "Change Dates" button to guests in their dashboard</p>
+              </div>
+              <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={localPolicies.guestCanReschedule}
+                  onChange={e => setLocalPolicies(prev => ({ ...prev, guestCanReschedule: e.target.checked }))}
+                  style={{ opacity: 0, width: 0, height: 0 }}
+                />
+                <span style={{
+                  position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                  backgroundColor: localPolicies.guestCanReschedule ? '#10B981' : '#D1D5DB',
+                  borderRadius: 24, transition: '.3s'
+                }}>
+                  <span style={{
+                    position: 'absolute', content: '""', height: 18, width: 18, left: 3, bottom: 3,
+                    backgroundColor: 'white', borderRadius: '50%', transition: '.3s',
+                    transform: localPolicies.guestCanReschedule ? 'translateX(20px)' : 'translateX(0)'
+                  }} />
+                </span>
+              </label>
+            </div>
+
+            {localPolicies.guestCanReschedule && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #E5E7EB' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                  Prior Date Change Notice Window (Hours before Check-in)
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input 
+                    type="number" 
+                    min="0"
+                    step="1"
+                    value={localPolicies.rescheduleNoticeHours}
+                    onChange={e => setLocalPolicies(prev => ({ ...prev, rescheduleNoticeHours: Math.max(0, parseInt(e.target.value) || 0) }))}
+                    style={{ width: '110px', padding: '8px 12px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.95rem' }}
+                  />
+                  <span style={{ fontSize: '0.85rem', color: '#6B7280' }}>
+                    hours before check-in ({Math.floor(localPolicies.rescheduleNoticeHours / 24)}d {localPolicies.rescheduleNoticeHours % 24}h)
+                  </span>
+                </div>
+                <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#9CA3AF' }}>
+                  Guests can only reschedule if check-in is at least {localPolicies.rescheduleNoticeHours} hours away.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <button onClick={handleSavePolicies} style={{ backgroundColor: '#2563EB', color: 'white', padding: '10px 24px', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+            Save Booking Policies
+          </button>
         </div>
 
         <AdminCredentialsForm />
