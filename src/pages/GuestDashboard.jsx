@@ -25,7 +25,7 @@ export default function GuestDashboard() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registerError, setRegisterError] = useState('');
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     if (registerPassword !== registerConfirmPassword) {
       setRegisterError('Passwords do not match.');
@@ -39,23 +39,63 @@ export default function GuestDashboard() {
 
     const profile = { name: registerName, email: registerEmail, phone: `${registerCountry} ${registerPhone}`, password: registerPassword };
     
-    const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-    if (existingUsers.some(u => u.email.toLowerCase() === registerEmail.toLowerCase())) {
-      setRegisterError('Email already registered.');
+    try {
+      const res = await fetch('/api/guests/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile)
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setRegisterError(data.error || 'Registration failed.');
+        return;
+      }
+      const savedUser = data.user || profile;
+      setGuestProfile(savedUser);
+      localStorage.setItem('guestProfile', JSON.stringify(savedUser));
+      setRegisterError('');
+      setLoginError('');
       return;
+    } catch (err) {
+      console.warn("Backend register unavailable, saving locally:", err);
+      const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      if (existingUsers.some(u => u.email.toLowerCase() === registerEmail.toLowerCase())) {
+        setRegisterError('Email already registered.');
+        return;
+      }
+      existingUsers.push(profile);
+      localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
+      
+      setGuestProfile(profile);
+      localStorage.setItem('guestProfile', JSON.stringify(profile));
+      setRegisterError('');
+      setLoginError('');
     }
-    existingUsers.push(profile);
-    localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
-    
-    setGuestProfile(profile);
-    localStorage.setItem('guestProfile', JSON.stringify(profile));
-    setRegisterError('');
-    setLoginError('');
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     
+    try {
+      const res = await fetch('/api/guests/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail, password: loginPassword })
+      });
+      const data = await res.json();
+      if (data.success && data.user) {
+        setGuestProfile(data.user);
+        localStorage.setItem('guestProfile', JSON.stringify(data.user));
+        setLoginError('');
+        return;
+      } else if (res.status === 401) {
+        setLoginError(data.error || 'Invalid credentials.');
+        return;
+      }
+    } catch (err) {
+      console.warn("Backend login failed or offline, checking local storage:", err);
+    }
+
     const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
     const user = existingUsers.find(u => u.email.toLowerCase() === loginEmail.toLowerCase());
     

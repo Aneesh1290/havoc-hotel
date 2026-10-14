@@ -16,9 +16,18 @@ export const HotelProvider = ({ children }) => {
     return saved !== null ? parseFloat(saved) : 18;
   });
 
-  const updateTaxRate = (newRate) => {
+  const updateTaxRate = async (newRate) => {
     setTaxRate(newRate);
     localStorage.setItem('hotelTaxRate', newRate);
+    try {
+      await fetch(`${API_URL}/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'taxRate', value: newRate })
+      });
+    } catch (err) {
+      console.error("Failed to sync taxRate:", err);
+    }
   };
 
   const [offersEnabled, setOffersEnabled] = useState(() => {
@@ -26,26 +35,49 @@ export const HotelProvider = ({ children }) => {
     return saved !== null ? JSON.parse(saved) : true;
   });
 
-  const toggleOffers = () => {
-    setOffersEnabled(prev => {
-      const newState = !prev;
-      localStorage.setItem('offersEnabled', JSON.stringify(newState));
-      return newState;
-    });
+  const toggleOffers = async () => {
+    const newState = !offersEnabled;
+    setOffersEnabled(newState);
+    localStorage.setItem('offersEnabled', JSON.stringify(newState));
+    try {
+      await fetch(`${API_URL}/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'offersEnabled', value: newState })
+      });
+    } catch (err) {
+      console.error("Failed to sync offersEnabled:", err);
+    }
   };
 
   const [offers, setOffers] = useState(() => {
     const saved = localStorage.getItem('hotelOffers');
     if (saved) return JSON.parse(saved);
-    return [
-      { id: 1, title: 'Winter Getaway 20% Off', description: 'Book any stay for 3 or more nights this winter and enjoy a flat 20% discount on your entire booking.', code: 'WINTER20', color: '#D97706', bg: '#FEF3C7' },
-      { id: 2, title: 'Early Bird Special', description: 'Plan ahead! Book 30 days in advance and receive a complimentary room upgrade and breakfast.', code: 'EARLYBIRD', color: '#059669', bg: '#ECFDF5' }
-    ];
+    return [];
   });
 
-  const saveOffers = (newOffers) => {
-    setOffers(newOffers);
-    localStorage.setItem('hotelOffers', JSON.stringify(newOffers));
+  const addOffer = async (newOffer) => {
+    setOffers(prev => [newOffer, ...prev]);
+    localStorage.setItem('hotelOffers', JSON.stringify([newOffer, ...offers]));
+    try {
+      await fetch(`${API_URL}/offers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newOffer)
+      });
+    } catch (err) {
+      console.error("Failed to save offer:", err);
+    }
+  };
+
+  const removeOffer = async (id) => {
+    setOffers(prev => prev.filter(o => o.id !== id));
+    localStorage.setItem('hotelOffers', JSON.stringify(offers.filter(o => o.id !== id)));
+    try {
+      await fetch(`${API_URL}/offers/${id}`, { method: 'DELETE' });
+    } catch (err) {
+      console.error("Failed to delete offer:", err);
+    }
   };
 
   const [inventoryAlerts, setInventoryAlerts] = useState([
@@ -58,18 +90,38 @@ export const HotelProvider = ({ children }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [propsRes, bookingsRes, roomsRes] = await Promise.all([
+        const [propsRes, bookingsRes, roomsRes, offersRes, settingsRes] = await Promise.all([
           fetch(`${API_URL}/properties`),
           fetch(`${API_URL}/bookings`),
-          fetch(`${API_URL}/rooms`)
+          fetch(`${API_URL}/rooms`),
+          fetch(`${API_URL}/offers`),
+          fetch(`${API_URL}/settings`)
         ]);
         const propsData = await propsRes.json();
         const bookingsData = await bookingsRes.json();
         const roomsData = await roomsRes.json();
+        const offersData = await offersRes.json();
+        const settingsData = await settingsRes.json();
         
         setProperties(propsData);
         setBookings(bookingsData);
         setRooms(roomsData);
+
+        if (Array.isArray(offersData)) {
+          setOffers(offersData);
+          localStorage.setItem('hotelOffers', JSON.stringify(offersData));
+        }
+
+        if (settingsData) {
+          if (settingsData.offersEnabled !== undefined) {
+            setOffersEnabled(settingsData.offersEnabled);
+            localStorage.setItem('offersEnabled', JSON.stringify(settingsData.offersEnabled));
+          }
+          if (settingsData.taxRate !== undefined) {
+            setTaxRate(parseFloat(settingsData.taxRate));
+            localStorage.setItem('hotelTaxRate', settingsData.taxRate);
+          }
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -199,7 +251,7 @@ export const HotelProvider = ({ children }) => {
       rooms, addRoomType, removeRoomType, updateRoomType,
       inventoryAlerts, setInventoryAlerts,
       taxRate, updateTaxRate,
-      offersEnabled, toggleOffers, offers, saveOffers,
+      offersEnabled, toggleOffers, offers, addOffer, removeOffer,
       loading
     }}>
       {children}

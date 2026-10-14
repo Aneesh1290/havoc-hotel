@@ -51,7 +51,46 @@ db.exec(`
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS offers (
+    id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    code TEXT NOT NULL,
+    status TEXT DEFAULT 'Active',
+    expires TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS guests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    phone TEXT,
+    password TEXT NOT NULL,
+    createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+  );
 `);
+
+// Seed default offers if empty
+const countOffers = db.prepare('SELECT count(*) as count FROM offers').get();
+if (countOffers.count === 0) {
+  const insertOffer = db.prepare('INSERT INTO offers (id, title, description, code, status, expires) VALUES (?, ?, ?, ?, ?, ?)');
+  insertOffer.run(1, 'Winter Getaway 20% Off', 'Book any stay for 3 or more nights this winter and enjoy a flat 20% discount on your entire booking.', 'WINTER20', 'Active', '30 days');
+  insertOffer.run(2, 'Early Bird Special', 'Plan ahead! Book 30 days in advance and receive a complimentary room upgrade and breakfast.', 'EARLYBIRD', 'Active', '60 days');
+}
+
+// Seed default settings if empty
+const getSetting = db.prepare('SELECT value FROM settings WHERE key = ?');
+if (!getSetting.get('offersEnabled')) {
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('offersEnabled', 'true');
+}
+if (!getSetting.get('taxRate')) {
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('taxRate', '18');
+}
 
 try {
   db.exec("ALTER TABLE room_types ADD COLUMN images TEXT DEFAULT '[]'");

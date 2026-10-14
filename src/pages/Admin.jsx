@@ -517,10 +517,23 @@ function GuestsView() {
   const [guests, setGuests] = React.useState([]);
 
   React.useEffect(() => {
-    const saved = localStorage.getItem('registeredUsers');
-    if (saved) {
-      setGuests(JSON.parse(saved));
-    }
+    const fetchGuests = async () => {
+      try {
+        const res = await fetch('/api/guests');
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setGuests(data);
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to fetch guests from API:", err);
+      }
+      const saved = localStorage.getItem('registeredUsers');
+      if (saved) {
+        setGuests(JSON.parse(saved));
+      }
+    };
+    fetchGuests();
   }, []);
 
   return (
@@ -1291,7 +1304,7 @@ function ReportsView({ bookings, properties }) {
 }
 
 function OffersView() {
-  const { offers, saveOffers, offersEnabled, toggleOffers } = useHotels();
+  const { offers, addOffer, removeOffer, offersEnabled, toggleOffers } = useHotels();
   const [showModal, setShowModal] = useState(false);
   const [offerForm, setOfferForm] = useState({ title: '', description: '', code: '', expires: '' });
 
@@ -1308,14 +1321,14 @@ function OffersView() {
       expires: offerForm.expires || '30 days'
     };
     
-    saveOffers([newOffer, ...offers]);
+    addOffer(newOffer);
     setShowModal(false);
     setOfferForm({ title: '', description: '', code: '', expires: '' });
   };
 
-  const removeOffer = (id) => {
+  const handleRemoveOffer = (id) => {
     if (window.confirm("Are you sure you want to delete this offer?")) {
-      saveOffers(offers.filter(o => o.id !== id));
+      removeOffer(id);
     }
   };
 
@@ -1342,7 +1355,7 @@ function OffersView() {
               <span style={{ padding: '4px 12px', backgroundColor: '#ECFDF5', color: '#10B981', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600 }}>{offer.status}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ color: '#6B7280', fontSize: '0.85rem' }}>Expires in {offer.expires}</span>
-                <button onClick={() => removeOffer(offer.id)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', display: 'flex' }} title="Delete Offer">
+                <button onClick={() => handleRemoveOffer(offer.id)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', display: 'flex' }} title="Delete Offer">
                   <Trash2 size={16} />
                 </button>
               </div>

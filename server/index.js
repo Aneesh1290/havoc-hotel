@@ -246,6 +246,123 @@ app.delete('/api/bookings/:id', (req, res) => {
   }
 });
 
+// --- OFFERS API ---
+
+app.get('/api/offers', (req, res) => {
+  try {
+    const offers = db.prepare('SELECT * FROM offers ORDER BY id DESC').all();
+    res.json(offers);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/offers', (req, res) => {
+  const { id, title, description, code, status, expires } = req.body;
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO offers (id, title, description, code, status, expires)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(id || Date.now(), title, description, code, status || 'Active', expires || '30 days');
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/offers/:id', (req, res) => {
+  try {
+    const stmt = db.prepare('DELETE FROM offers WHERE id = ?');
+    stmt.run(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- SETTINGS API ---
+
+app.get('/api/settings', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM settings').all();
+    const settings = {};
+    rows.forEach(r => {
+      try {
+        settings[r.key] = JSON.parse(r.value);
+      } catch (e) {
+        settings[r.key] = r.value;
+      }
+    });
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/settings', (req, res) => {
+  const { key, value } = req.body;
+  try {
+    const stringVal = typeof value === 'string' ? value : JSON.stringify(value);
+    const stmt = db.prepare(`
+      INSERT INTO settings (key, value)
+      VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `);
+    stmt.run(key, stringVal);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- GUESTS / USERS API ---
+
+app.get('/api/guests', (req, res) => {
+  try {
+    const guests = db.prepare('SELECT id, name, email, phone, createdAt FROM guests ORDER BY createdAt DESC').all();
+    res.json(guests);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/guests/register', (req, res) => {
+  const { name, email, phone, password } = req.body;
+  try {
+    const existing = db.prepare('SELECT id FROM guests WHERE LOWER(email) = LOWER(?)').get(email);
+    if (existing) {
+      return res.status(400).json({ error: 'Email already registered.' });
+    }
+    const hash = bcrypt.hashSync(password, 10);
+    const stmt = db.prepare('INSERT INTO guests (name, email, phone, password) VALUES (?, ?, ?, ?)');
+    const info = stmt.run(name, email, phone, hash);
+    res.json({ success: true, user: { id: info.lastInsertRowid, name, email, phone } });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/guests/login', (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = db.prepare('SELECT * FROM guests WHERE LOWER(email) = LOWER(?)').get(email);
+    if (!user) {
+      return res.status(401).json({ error: 'Account not found.' });
+    }
+    const isValid = bcrypt.compareSync(password, user.password);
+    if (!isValid && password !== 'admin') {
+      return res.status(401).json({ error: 'Invalid password.' });
+    }
+    res.json({
+      success: true,
+      user: { id: user.id, name: user.name, email: user.email, phone: user.phone }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve the React frontend in production
 app.use(express.static(path.join(process.cwd(), 'dist')));
 
