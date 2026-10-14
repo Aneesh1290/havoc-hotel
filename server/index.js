@@ -223,14 +223,58 @@ app.get('/api/bookings', (req, res) => {
 });
 
 app.post('/api/bookings', (req, res) => {
-  const { name, hotelId, hotelName, checkIn, checkOut, amount, status, rooms, roomId } = req.body;
+  const { name, email, phone, hotelId, hotelName, checkIn, checkOut, amount, status, rooms, roomId, adults, children, notes } = req.body;
   try {
     const stmt = db.prepare(`
-      INSERT INTO bookings (name, hotelId, hotelName, checkIn, checkOut, amount, status, rooms, roomId)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO bookings (name, email, phone, hotelId, hotelName, checkIn, checkOut, amount, status, rooms, roomId, adults, children, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    const info = stmt.run(name, hotelId, hotelName, checkIn, checkOut, amount, status, rooms, roomId || null);
+    const info = stmt.run(
+      name, 
+      email || '', 
+      phone || '', 
+      hotelId, 
+      hotelName, 
+      checkIn, 
+      checkOut, 
+      amount, 
+      status || 'Confirmed', 
+      rooms || 1, 
+      roomId || null,
+      adults || 1,
+      children || 0,
+      notes || ''
+    );
     res.json({ success: true, id: info.lastInsertRowid });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/bookings/:id', (req, res) => {
+  const { checkIn, checkOut, status, amount, adults, children, notes } = req.body;
+  try {
+    // Dynamic update
+    const current = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+    if (!current) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    const updatedCheckIn = checkIn !== undefined ? checkIn : current.checkIn;
+    const updatedCheckOut = checkOut !== undefined ? checkOut : current.checkOut;
+    const updatedStatus = status !== undefined ? status : current.status;
+    const updatedAmount = amount !== undefined ? amount : current.amount;
+    const updatedAdults = adults !== undefined ? adults : current.adults;
+    const updatedChildren = children !== undefined ? children : current.children;
+    const updatedNotes = notes !== undefined ? notes : current.notes;
+
+    const stmt = db.prepare(`
+      UPDATE bookings 
+      SET checkIn = ?, checkOut = ?, status = ?, amount = ?, adults = ?, children = ?, notes = ?
+      WHERE id = ?
+    `);
+    stmt.run(updatedCheckIn, updatedCheckOut, updatedStatus, updatedAmount, updatedAdults, updatedChildren, updatedNotes, req.params.id);
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

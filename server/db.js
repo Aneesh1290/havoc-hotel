@@ -100,6 +100,26 @@ try {
   db.exec("ALTER TABLE bookings ADD COLUMN roomId TEXT");
 } catch (e) {}
 
+try {
+  db.exec("ALTER TABLE bookings ADD COLUMN email TEXT");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE bookings ADD COLUMN phone TEXT");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE bookings ADD COLUMN adults INTEGER DEFAULT 1");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE bookings ADD COLUMN children INTEGER DEFAULT 0");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE bookings ADD COLUMN notes TEXT");
+} catch (e) {}
+
 // Seed initial properties if empty
 const countProps = db.prepare('SELECT count(*) as count FROM properties').get();
 if (countProps.count === 0) {

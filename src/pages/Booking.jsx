@@ -80,14 +80,19 @@ export default function Booking() {
         const room = propertyRooms.find(r => r.id === roomId);
         addBooking({
           name: formData.name,
+          email: formData.email,
+          phone: formData.phone || '',
           hotelId: property.id,
           hotelName: property.name,
           checkIn: checkIn.toISOString(),
           checkOut: checkOut.toISOString(),
-          amount: room.pricePerNight * nights * count * (1 + taxRate / 100),
+          amount: Math.round(room.pricePerNight * nights * count * (1 + taxRate / 100)),
           status: 'Confirmed',
           rooms: count,
-          roomId: room.id
+          roomId: room.id,
+          adults: parseInt(guests.adults) || 1,
+          children: parseInt(guests.children) || 0,
+          notes: formData.description || ''
         });
       }
     });

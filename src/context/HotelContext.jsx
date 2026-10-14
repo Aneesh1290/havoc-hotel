@@ -191,9 +191,21 @@ export const HotelProvider = ({ children }) => {
     }
   };
 
-  const updateBookingStatus = (id, status) => {
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
-    // Implementation for DB update can be added here
+  const updateBooking = async (id, updatedData) => {
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, ...updatedData } : b));
+    try {
+      await fetch(`${API_URL}/bookings/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData)
+      });
+    } catch (error) {
+      console.error("Failed to update booking", error);
+    }
+  };
+
+  const updateBookingStatus = async (id, status) => {
+    await updateBooking(id, { status });
   };
 
   const removeBooking = async (id) => {
@@ -247,7 +259,7 @@ export const HotelProvider = ({ children }) => {
   return (
     <HotelContext.Provider value={{ 
       properties, addProperty, removeProperty, updateProperty,
-      bookings, addBooking, updateBookingStatus, removeBooking,
+      bookings, addBooking, updateBooking, updateBookingStatus, removeBooking,
       rooms, addRoomType, removeRoomType, updateRoomType,
       inventoryAlerts, setInventoryAlerts,
       taxRate, updateTaxRate,
