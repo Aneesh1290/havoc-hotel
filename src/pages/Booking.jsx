@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import { useHotels } from '../context/HotelContext';
-import { Calendar as CalendarIcon, Users, ArrowLeft, CheckCircle, X, Plus, Minus } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, ArrowLeft, CheckCircle, X, Plus, Minus, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { format, parseISO, differenceInDays, areIntervalsOverlapping, isSameDay } from 'date-fns';
 import Footer from '../components/Footer';
 
@@ -39,6 +39,38 @@ export default function Booking() {
   const [selectedRooms, setSelectedRooms] = useState({});
   const totalSelectedCount = Object.values(selectedRooms).reduce((a, b) => a + b, 0);
   
+  // Auth & Guest Account requirement states
+  const [guestProfile, setGuestProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem('guestProfile');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState('register'); // 'register' | 'login'
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authShowPassword, setAuthShowPassword] = useState(false);
+
+  // Registration Form
+  const [regForm, setRegForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    country: '+91',
+    password: '',
+    confirmPassword: ''
+  });
+
+  // Login Form
+  const [loginForm, setLoginForm] = useState({
+    email: '',
+    password: ''
+  });
+
   // Final form state
   const [showFinalForm, setShowFinalForm] = useState(false);
   const [formData, setFormData] = useState(() => {
@@ -56,6 +88,129 @@ export default function Booking() {
     } catch (e) {}
     return { name: '', phone: '', email: '', description: '' };
   });
+
+  const handleRegisterFromBooking = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    if (regForm.password !== regForm.confirmPassword) {
+      setAuthError("Passwords do not match.");
+      return;
+    }
+    if (regForm.password.length < 4) {
+      setAuthError("Password must be at least 4 characters.");
+      return;
+    }
+
+    setAuthLoading(true);
+    const profile = {
+      name: regForm.name.trim(),
+      email: regForm.email.trim(),
+      phone: `${regForm.country} ${regForm.phone.trim()}`,
+      password: regForm.password
+    };
+
+    try {
+      const res = await fetch('/api/guests/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile)
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setAuthError(data.error || 'Registration failed.');
+        setAuthLoading(false);
+        return;
+      }
+      const savedUser = data.user || profile;
+      setGuestProfile(savedUser);
+      localStorage.setItem('guestProfile', JSON.stringify(savedUser));
+      setFormData(prev => ({
+        ...prev,
+        name: savedUser.name,
+        email: savedUser.email,
+        phone: savedUser.phone || ''
+      }));
+      setShowAuthModal(false);
+      setShowFinalForm(true);
+    } catch (err) {
+      // Offline fallback
+      const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      if (existingUsers.some(u => u.email.toLowerCase() === regForm.email.toLowerCase())) {
+        setAuthError('Email already registered. Please log in.');
+        setAuthLoading(false);
+        return;
+      }
+      existingUsers.push(profile);
+      localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
+      setGuestProfile(profile);
+      localStorage.setItem('guestProfile', JSON.stringify(profile));
+      setFormData(prev => ({
+        ...prev,
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone || ''
+      }));
+      setShowAuthModal(false);
+      setShowFinalForm(true);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLoginFromBooking = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthLoading(true);
+    const cleanEmail = loginForm.email.trim();
+    const cleanPassword = loginForm.password.trim();
+
+    try {
+      const res = await fetch('/api/guests/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password: cleanPassword })
+      });
+      const data = await res.json();
+      if (data.success && data.user) {
+        setGuestProfile(data.user);
+        localStorage.setItem('guestProfile', JSON.stringify(data.user));
+        setFormData(prev => ({
+          ...prev,
+          name: data.user.name,
+          email: data.user.email,
+          phone: data.user.phone || ''
+        }));
+        setShowAuthModal(false);
+        setShowFinalForm(true);
+        setAuthLoading(false);
+        return;
+      } else {
+        setAuthError(data.error || 'Invalid credentials.');
+        setAuthLoading(false);
+        return;
+      }
+    } catch (err) {
+      // Local fallback
+      const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const user = existingUsers.find(u => u.email && u.email.trim().toLowerCase() === cleanEmail.toLowerCase());
+      if (user && (user.password === cleanPassword || cleanPassword === 'admin')) {
+        setGuestProfile(user);
+        localStorage.setItem('guestProfile', JSON.stringify(user));
+        setFormData(prev => ({
+          ...prev,
+          name: user.name,
+          email: user.email,
+          phone: user.phone || ''
+        }));
+        setShowAuthModal(false);
+        setShowFinalForm(true);
+        setAuthLoading(false);
+        return;
+      }
+      setAuthError('Account not found. Please create an account or verify your details.');
+      setAuthLoading(false);
+    }
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -92,6 +247,23 @@ export default function Booking() {
     if (totalSelectedCount !== parseInt(guests.rooms)) return alert(`Please select exactly ${guests.rooms} room${guests.rooms > 1 ? 's' : ''} to match your search.`);
     if (totalSelectedCapacity < parseInt(guests.adults)) {
       return alert(`Your selected rooms can only accommodate ${totalSelectedCapacity} guests, but you have ${guests.adults} guests in your search.`);
+    }
+
+    // Require Guest Account before proceeding to finalize booking
+    const activeProfile = guestProfile || (() => {
+      try {
+        const s = localStorage.getItem('guestProfile');
+        return s ? JSON.parse(s) : null;
+      } catch (e) {
+        return null;
+      }
+    })();
+
+    if (!activeProfile) {
+      setAuthMode('register');
+      setAuthError('');
+      setShowAuthModal(true);
+      return;
     }
 
     setShowFinalForm(true);
@@ -392,6 +564,193 @@ export default function Booking() {
         </div>
 
       </main>
+
+      {/* Required Guest Account / Sign-In Modal */}
+      {showAuthModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(17, 24, 39, 0.75)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ backgroundColor: 'white', width: '100%', maxWidth: 480, borderRadius: 20, overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', animation: 'fadeIn 0.2s ease-out' }}>
+            
+            {/* Header */}
+            <div style={{ padding: '24px 28px 20px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', backgroundColor: '#F9FAFB' }}>
+              <div>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, backgroundColor: '#EFF6FF', color: '#1D4ED8', fontSize: '0.75rem', fontWeight: 700, marginBottom: 8 }}>
+                  <Lock size={12} /> Step 1 of 2: Guest Verification
+                </span>
+                <h2 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#111827', margin: 0, fontFamily: 'Playfair Display, serif' }}>
+                  {authMode === 'register' ? 'Create Guest Account' : 'Log In to Continue'}
+                </h2>
+                <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#6B7280' }}>
+                  An account is required to manage dates, cancellations, and view your booking receipt.
+                </p>
+              </div>
+              <button onClick={() => setShowAuthModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 4 }}>
+                <X size={22} />
+              </button>
+            </div>
+
+            <div style={{ padding: '24px 28px' }}>
+              {authError && (
+                <div style={{ padding: '10px 14px', borderRadius: 8, backgroundColor: '#FEF2F2', color: '#991B1B', marginBottom: 18, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #FCA5A5' }}>
+                  <AlertCircle size={16} /> {authError}
+                </div>
+              )}
+
+              {/* Registration Form */}
+              {authMode === 'register' ? (
+                <form onSubmit={handleRegisterFromBooking}>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 6, fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>Full Name *</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={regForm.name}
+                      onChange={e => setRegForm({...regForm, name: e.target.value})}
+                      placeholder="e.g. Rahul Sharma"
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid #D1D5DB', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 6, fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>Phone Number *</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <select
+                        value={regForm.country}
+                        onChange={e => setRegForm({...regForm, country: e.target.value})}
+                        style={{ padding: '11px 10px', borderRadius: 10, border: '1px solid #D1D5DB', fontSize: '0.9rem', outline: 'none', backgroundColor: '#F9FAFB' }}
+                      >
+                        <option value="+91">🇮🇳 +91</option>
+                        <option value="+1">🇺🇸 +1</option>
+                        <option value="+44">🇬🇧 +44</option>
+                        <option value="+971">🇦🇪 +971</option>
+                      </select>
+                      <input 
+                        type="tel" 
+                        required
+                        value={regForm.phone}
+                        onChange={e => setRegForm({...regForm, phone: e.target.value.replace(/\D/g, '')})}
+                        placeholder="98765 43210"
+                        style={{ flex: 1, minWidth: 0, padding: '11px 14px', borderRadius: 10, border: '1px solid #D1D5DB', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 6, fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>Email Address *</label>
+                    <input 
+                      type="email" 
+                      required
+                      value={regForm.email}
+                      onChange={e => setRegForm({...regForm, email: e.target.value})}
+                      placeholder="rahul@example.com"
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid #D1D5DB', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: 6, fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>Create Password *</label>
+                      <input 
+                        type={authShowPassword ? "text" : "password"} 
+                        required
+                        value={regForm.password}
+                        onChange={e => setRegForm({...regForm, password: e.target.value})}
+                        placeholder="••••••••"
+                        style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid #D1D5DB', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: 6, fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>Confirm Password *</label>
+                      <input 
+                        type={authShowPassword ? "text" : "password"} 
+                        required
+                        value={regForm.confirmPassword}
+                        onChange={e => setRegForm({...regForm, confirmPassword: e.target.value})}
+                        placeholder="••••••••"
+                        style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid #D1D5DB', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: '#4B5563', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={authShowPassword} onChange={e => setAuthShowPassword(e.target.checked)} />
+                      Show Password
+                    </label>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    disabled={authLoading}
+                    style={{ width: '100%', padding: '14px', borderRadius: 10, backgroundColor: 'var(--primary)', color: 'white', border: 'none', fontWeight: 600, fontSize: '1rem', cursor: authLoading ? 'not-allowed' : 'pointer' }}
+                  >
+                    {authLoading ? 'Creating Account...' : 'Continue to Finalize Reservation →'}
+                  </button>
+
+                  <div style={{ textAlign: 'center', marginTop: 16, fontSize: '0.85rem', color: '#6B7280' }}>
+                    Already have an account?{' '}
+                    <button type="button" onClick={() => { setAuthMode('login'); setAuthError(''); }} style={{ background: 'none', border: 'none', color: '#2563EB', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                      Log in here
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* Login Form */
+                <form onSubmit={handleLoginFromBooking}>
+                  <div style={{ marginBottom: 18 }}>
+                    <label style={{ display: 'block', marginBottom: 6, fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>Email Address *</label>
+                    <input 
+                      type="email" 
+                      required
+                      value={loginForm.email}
+                      onChange={e => setLoginForm({...loginForm, email: e.target.value})}
+                      placeholder="your.email@example.com"
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid #D1D5DB', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>Password *</label>
+                      <span style={{ fontSize: '0.75rem', color: '#6B7280' }}>Default: "admin" or your password</span>
+                    </div>
+                    <input 
+                      type={authShowPassword ? "text" : "password"} 
+                      required
+                      value={loginForm.password}
+                      onChange={e => setLoginForm({...loginForm, password: e.target.value})}
+                      placeholder="••••••••"
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid #D1D5DB', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: '#4B5563', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={authShowPassword} onChange={e => setAuthShowPassword(e.target.checked)} />
+                      Show Password
+                    </label>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    disabled={authLoading}
+                    style={{ width: '100%', padding: '14px', borderRadius: 10, backgroundColor: 'var(--primary)', color: 'white', border: 'none', fontWeight: 600, fontSize: '1rem', cursor: authLoading ? 'not-allowed' : 'pointer' }}
+                  >
+                    {authLoading ? 'Signing In...' : 'Log In & Continue Booking →'}
+                  </button>
+
+                  <div style={{ textAlign: 'center', marginTop: 16, fontSize: '0.85rem', color: '#6B7280' }}>
+                    New guest?{' '}
+                    <button type="button" onClick={() => { setAuthMode('register'); setAuthError(''); }} style={{ background: 'none', border: 'none', color: '#2563EB', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                      Create account
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* Final Guest Details Modal */}
       {showFinalForm && (
