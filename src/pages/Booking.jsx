@@ -41,10 +41,36 @@ export default function Booking() {
   
   // Final form state
   const [showFinalForm, setShowFinalForm] = useState(false);
-  const [formData, setFormData] = useState({ name: '', phone: '', email: '', description: '' });
+  const [formData, setFormData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('guestProfile');
+      if (saved) {
+        const profile = JSON.parse(saved);
+        return {
+          name: profile.name || '',
+          phone: profile.phone || '',
+          email: profile.email || '',
+          description: ''
+        };
+      }
+    } catch (e) {}
+    return { name: '', phone: '', email: '', description: '' };
+  });
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    try {
+      const saved = localStorage.getItem('guestProfile');
+      if (saved) {
+        const profile = JSON.parse(saved);
+        setFormData(prev => ({
+          ...prev,
+          name: prev.name || profile.name || '',
+          phone: prev.phone || profile.phone || '',
+          email: prev.email || profile.email || ''
+        }));
+      }
+    } catch (e) {}
   }, []);
 
   if (!property) {
@@ -97,8 +123,8 @@ export default function Booking() {
       }
     });
 
-    alert("Booking confirmed successfully! You can view it in the Admin Dashboard.");
-    navigate('/');
+    alert("Booking confirmed successfully! Redirecting to your guest panel.");
+    navigate('/guest');
   };
 
   return (
@@ -372,7 +398,14 @@ export default function Booking() {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(17, 24, 39, 0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ backgroundColor: 'white', width: '100%', maxWidth: 500, borderRadius: 16, overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
             <div style={{ padding: '24px 32px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'Playfair Display, serif' }}>Guest Details</h2>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'Playfair Display, serif', margin: 0 }}>Guest Details</h2>
+                {localStorage.getItem('guestProfile') && (
+                  <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#059669', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <CheckCircle size={14} /> Auto-filled from your logged in account
+                  </p>
+                )}
+              </div>
               <button onClick={() => setShowFinalForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280' }}><X size={24} /></button>
             </div>
             
