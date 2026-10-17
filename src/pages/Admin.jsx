@@ -257,8 +257,10 @@ export default function Admin() {
 function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, rooms, adminProfile }) {
   const [today, setToday] = useState(startOfDay(new Date()));
 
-  // Calculate actual total capacity based on all room types added to properties
-  const totalRooms = rooms ? rooms.reduce((sum, r) => sum + (r.totalUnits || 0), 0) : properties.reduce((sum, p) => sum + (p.roomsAvailable || 0), 0);
+  // Calculate actual total capacity based strictly on all room types added to properties
+  const totalRooms = Array.isArray(rooms)
+    ? rooms.reduce((sum, r) => sum + (Number(r.totalUnits) || 0), 0) 
+    : properties.reduce((sum, p) => sum + (Number(p.roomsAvailable) || 0), 0);
   
   const activeBookingsToday = bookings.filter(b => {
     const checkIn = parseISO(b.checkIn);
@@ -358,11 +360,11 @@ function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, ro
           const pBookings = activeBookingsToday.filter(b => b.hotelId === p.id);
           const pOccRooms = pBookings.reduce((sum, b) => sum + (b.rooms || 1), 0);
           
-          // Calculate property capacity dynamically from rooms, fallback to legacy roomsAvailable
-          const pRooms = rooms ? rooms.filter(r => r.propertyId === p.id) : [];
-          const pTotalCapacity = pRooms.length > 0 
-            ? pRooms.reduce((sum, r) => sum + (r.totalUnits || 0), 0) 
-            : (p.roomsAvailable || 0);
+          // Calculate property capacity dynamically from rooms
+          const pRooms = Array.isArray(rooms) ? rooms.filter(r => r.propertyId === p.id) : [];
+          const pTotalCapacity = Array.isArray(rooms)
+            ? pRooms.reduce((sum, r) => sum + (Number(r.totalUnits) || 0), 0) 
+            : (Number(p.roomsAvailable) || 0);
 
           const pOccRate = pTotalCapacity > 0 ? Math.round((pOccRooms / pTotalCapacity) * 100) : 0;
           const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
