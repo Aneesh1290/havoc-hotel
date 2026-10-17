@@ -502,6 +502,19 @@ export default function GuestDashboard() {
                     </div>
                   </div>
 
+                  <div style={{ backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 10, padding: '12px 14px', marginBottom: 24 }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.85rem', color: '#4B5563', cursor: 'pointer', lineHeight: 1.4 }}>
+                      <input 
+                        type="checkbox" 
+                        required 
+                        style={{ marginTop: 2, cursor: 'pointer', accentColor: 'var(--primary)' }} 
+                      />
+                      <span>
+                        I accept the <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Terms & Conditions</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Privacy Policy</a>.
+                      </span>
+                    </label>
+                  </div>
+
                   {registerError && <div style={{ color: '#EF4444', fontSize: '0.85rem', marginBottom: 20, textAlign: 'center', backgroundColor: '#FEF2F2', padding: 10, borderRadius: 8 }}>{registerError}</div>}
                   
                   <button 

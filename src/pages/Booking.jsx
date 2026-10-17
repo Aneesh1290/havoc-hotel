@@ -671,10 +671,24 @@ export default function Booking() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: '#4B5563', cursor: 'pointer' }}>
                       <input type="checkbox" checked={authShowPassword} onChange={e => setAuthShowPassword(e.target.checked)} />
                       Show Password
+                    </label>
+                  </div>
+
+                  {/* Mandatory Terms & Privacy Checkbox */}
+                  <div style={{ backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 8, padding: '12px 14px', marginBottom: 20 }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.82rem', color: '#374151', cursor: 'pointer', lineHeight: 1.4 }}>
+                      <input 
+                        type="checkbox" 
+                        required 
+                        style={{ marginTop: 2, cursor: 'pointer', accentColor: 'var(--primary)' }} 
+                      />
+                      <span>
+                        I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#2563EB', textDecoration: 'underline' }}>Terms & Conditions</a>, <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#2563EB', textDecoration: 'underline' }}>Privacy Policy</a>, and understand government photo ID is mandatory at check-in.
+                      </span>
                     </label>
                   </div>
 
@@ -784,9 +798,14 @@ export default function Booking() {
                 <input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: 8 }} placeholder="+91 98765 43210" />
               </div>
               
-              <div style={{ marginBottom: 32 }}>
+              <div style={{ marginBottom: 20 }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4B5563', marginBottom: 8 }}>Special Requests</label>
-                <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: 8, minHeight: 80, resize: 'vertical' }} placeholder="Any special requirements..." />
+                <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: 8, minHeight: 70, resize: 'vertical' }} placeholder="Any special requirements..." />
+              </div>
+
+              {/* Legal Check-in & ID Notice */}
+              <div style={{ backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 8, padding: '12px 14px', marginBottom: 20, fontSize: '0.8rem', color: '#4B5563', lineHeight: 1.4 }}>
+                <span style={{ fontWeight: 600, color: '#111827' }}>⚠️ Check-in Mandatory Policy:</span> Primary guest must present an original government-issued photo ID (Aadhaar, Passport, DL, or Voter ID). By clicking Confirm, you agree to our <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#2563EB' }}>Terms</a> & <a href="/cancellation" target="_blank" rel="noopener noreferrer" style={{ color: '#2563EB' }}>Cancellation Rules</a>.
               </div>
 
               <button type="submit" style={{ width: '100%', padding: 16, borderRadius: 8, backgroundColor: 'var(--primary)', color: 'white', border: 'none', fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>

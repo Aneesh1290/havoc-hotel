@@ -8,6 +8,9 @@ import Hotels from './pages/Hotels';
 import Offers from './pages/Offers';
 import Contact from './pages/Contact';
 import GuestDashboard from './pages/GuestDashboard';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsConditions from './pages/TermsConditions';
+import CancellationPolicy from './pages/CancellationPolicy';
 
 export default function App() {
   return (
@@ -20,6 +23,9 @@ export default function App() {
         <Route path="/offers" element={<Offers />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/guest" element={<GuestDashboard />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsConditions />} />
+        <Route path="/cancellation" element={<CancellationPolicy />} />
       </Routes>
     </HotelProvider>
   );

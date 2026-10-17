@@ -39,10 +39,12 @@ export default function Footer() {
         <div className="footer-bottom" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 30, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
           <p style={{ color: '#6B7280', fontSize: '0.85rem', margin: 0 }}>&copy; {new Date().getFullYear()} Sabharwal Hospitality. All rights reserved.</p>
           
-          <div style={{ display: 'flex', gap: 16 }}>
-            <a href="#" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '0.85rem' }}>Privacy Policy</a>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+            <Link to="/privacy" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '0.85rem' }}>Privacy Policy</Link>
             <span style={{ color: '#4B5563' }}>|</span>
-            <a href="#" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '0.85rem' }}>Terms of Service</a>
+            <Link to="/terms" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '0.85rem' }}>Terms of Service</Link>
+            <span style={{ color: '#4B5563' }}>|</span>
+            <Link to="/cancellation" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '0.85rem' }}>Cancellation & Refund</Link>
           </div>
 
           <p style={{ color: '#6B7280', fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>
