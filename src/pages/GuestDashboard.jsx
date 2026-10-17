@@ -27,8 +27,16 @@ export default function GuestDashboard() {
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registerError, setRegisterError] = useState('');
+  
+  // Forgot / Reset Password States
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [newResetPassword, setNewResetPassword] = useState('');
+  const [confirmResetPassword, setConfirmResetPassword] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
+  const [isResetLoading, setIsResetLoading] = useState(false);
 
   // Booking Management States
   const [selectedBooking, setSelectedBooking] = useState(null);
@@ -160,6 +168,80 @@ export default function GuestDashboard() {
   const handleLogout = () => {
     setGuestProfile(null);
     localStorage.removeItem('guestProfile');
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setResetError('');
+    setResetSuccess('');
+
+    const cleanEmail = forgotEmail.trim();
+    if (!cleanEmail) {
+      setResetError('Please enter your registered email address.');
+      return;
+    }
+
+    if (newResetPassword !== confirmResetPassword) {
+      setResetError('Passwords do not match.');
+      return;
+    }
+
+    const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d\w\W]{8,}$/;
+    if (!pwdRegex.test(newResetPassword)) {
+      setResetError('Password must be at least 8 characters, include an uppercase letter, a lowercase letter, and a number.');
+      return;
+    }
+
+    setIsResetLoading(true);
+
+    try {
+      const res = await fetch('/api/guests/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, newPassword: newResetPassword })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setResetError(data.error || 'Failed to reset password.');
+        setIsResetLoading(false);
+        return;
+      }
+
+      // Also update local storage if user was stored locally
+      const localUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const userIndex = localUsers.findIndex(u => u.email && u.email.toLowerCase() === cleanEmail.toLowerCase());
+      if (userIndex !== -1) {
+        localUsers[userIndex].password = newResetPassword;
+        localStorage.setItem('registeredUsers', JSON.stringify(localUsers));
+      }
+
+      setResetSuccess('Your password has been successfully reset! You can now sign in.');
+      setNewResetPassword('');
+      setConfirmResetPassword('');
+      setTimeout(() => {
+        setIsForgotPassword(false);
+        setLoginEmail(cleanEmail);
+        setResetSuccess('');
+      }, 2000);
+    } catch (err) {
+      console.warn("Backend reset error, attempting local reset fallback:", err);
+      const localUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const user = localUsers.find(u => u.email && u.email.toLowerCase() === cleanEmail.toLowerCase());
+      if (user) {
+        user.password = newResetPassword;
+        localStorage.setItem('registeredUsers', JSON.stringify(localUsers));
+        setResetSuccess('Password reset successfully! Redirecting to sign in...');
+        setTimeout(() => {
+          setIsForgotPassword(false);
+          setLoginEmail(cleanEmail);
+          setResetSuccess('');
+        }, 2000);
+      } else {
+        setResetError('No account found with this email.');
+      }
+    } finally {
+      setIsResetLoading(false);
+    }
   };
 
   const openManageModal = (booking, defaultTab = 'dates') => {
@@ -402,7 +484,69 @@ export default function GuestDashboard() {
         
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ backgroundColor: 'white', borderRadius: 24, padding: '48px 40px', width: '100%', maxWidth: 420, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}>
-            {isRegistering ? (
+            {isForgotPassword ? (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: 36 }}>
+                  <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#111827', margin: '0 0 12px', fontFamily: 'var(--font-serif)' }}>Reset Your Password</h1>
+                  <p style={{ color: '#4B5563', fontSize: '0.95rem', margin: 0 }}>Enter your registered email and choose a new secure password.</p>
+                </div>
+
+                <form onSubmit={handleResetPassword}>
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>Registered Email</label>
+                    <input 
+                      type="email" 
+                      required
+                      value={forgotEmail}
+                      onChange={e => setForgotEmail(e.target.value)}
+                      placeholder="e.g. yourname@gmail.com"
+                      style={{ width: '100%', padding: '14px 16px', borderRadius: 12, border: '1px solid #D1D5DB', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F9FAFB' }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>New Password</label>
+                    <input 
+                      type="password" 
+                      required
+                      value={newResetPassword}
+                      onChange={e => setNewResetPassword(e.target.value)}
+                      placeholder="At least 8 chars (1 uppercase, 1 number)"
+                      style={{ width: '100%', padding: '14px 16px', borderRadius: 12, border: '1px solid #D1D5DB', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F9FAFB' }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: 24 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>Confirm New Password</label>
+                    <input 
+                      type="password" 
+                      required
+                      value={confirmResetPassword}
+                      onChange={e => setConfirmResetPassword(e.target.value)}
+                      placeholder="Re-enter your new password"
+                      style={{ width: '100%', padding: '14px 16px', borderRadius: 12, border: '1px solid #D1D5DB', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F9FAFB' }}
+                    />
+                  </div>
+
+                  {resetError && <div style={{ color: '#EF4444', fontSize: '0.85rem', marginBottom: 20, textAlign: 'center', backgroundColor: '#FEF2F2', padding: 10, borderRadius: 8 }}>{resetError}</div>}
+                  {resetSuccess && <div style={{ color: '#047857', fontSize: '0.85rem', marginBottom: 20, textAlign: 'center', backgroundColor: '#ECFDF5', padding: 10, borderRadius: 8, fontWeight: 500 }}>{resetSuccess}</div>}
+
+                  <button 
+                    type="submit" 
+                    disabled={isResetLoading}
+                    style={{ width: '100%', padding: '16px', borderRadius: 12, border: 'none', backgroundColor: 'var(--primary)', color: 'white', fontSize: '1.05rem', fontWeight: 600, cursor: 'pointer', opacity: isResetLoading ? 0.7 : 1 }}
+                  >
+                    {isResetLoading ? 'Updating Password...' : 'Reset Password'}
+                  </button>
+
+                  <div style={{ textAlign: 'center', marginTop: 24, fontSize: '0.9rem' }}>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setIsForgotPassword(false); setResetError(''); setResetSuccess(''); }} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+                      &larr; Back to Sign In
+                    </a>
+                  </div>
+                </form>
+              </>
+            ) : isRegistering ? (
               <>
                 <div style={{ textAlign: 'center', marginBottom: 40 }}>
                   <h1 style={{ fontSize: '2.2rem', fontWeight: 700, color: '#111827', margin: '0 0 12px', fontFamily: 'var(--font-serif)' }}>Create Account</h1>
@@ -569,7 +713,19 @@ export default function GuestDashboard() {
                       onBlur={e => e.target.style.borderColor = '#D1D5DB'}
                     />
                     <div style={{ textAlign: 'right', marginTop: 8 }}>
-                      <a href="#" onClick={e => e.preventDefault()} style={{ color: 'var(--primary)', fontSize: '0.8rem', textDecoration: 'none', fontWeight: 500 }}>Forgot password?</a>
+                      <a 
+                        href="#" 
+                        onClick={e => { 
+                          e.preventDefault(); 
+                          setForgotEmail(loginEmail);
+                          setIsForgotPassword(true); 
+                          setResetError('');
+                          setResetSuccess('');
+                        }} 
+                        style={{ color: 'var(--primary)', fontSize: '0.8rem', textDecoration: 'none', fontWeight: 500, cursor: 'pointer' }}
+                      >
+                        Forgot password?
+                      </a>
                     </div>
                   </div>
                   

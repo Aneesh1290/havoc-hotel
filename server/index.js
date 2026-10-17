@@ -416,6 +416,21 @@ app.post('/api/guests/login', (req, res) => {
   }
 });
 
+app.post('/api/guests/reset-password', (req, res) => {
+  const { email, newPassword } = req.body;
+  try {
+    const user = db.prepare('SELECT * FROM guests WHERE LOWER(email) = LOWER(?)').get(email);
+    if (!user) {
+      return res.status(404).json({ error: 'No account found with this email address.' });
+    }
+    const hash = bcrypt.hashSync(newPassword, 10);
+    db.prepare('UPDATE guests SET password = ? WHERE id = ?').run(hash, user.id);
+    res.json({ success: true, message: 'Password has been reset successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve the React frontend in production
 app.use(express.static(path.join(process.cwd(), 'dist')));
 
