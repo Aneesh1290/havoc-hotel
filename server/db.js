@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -7,6 +8,9 @@ const __dirname = path.dirname(__filename);
 
 // Support persistent disk via DATA_DIR environment variable
 const dataDir = process.env.DATA_DIR || __dirname;
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
 const dbPath = path.join(dataDir, 'database.sqlite');
 const db = new Database(dbPath);
 
