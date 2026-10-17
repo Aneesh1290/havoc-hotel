@@ -119,6 +119,9 @@ export default function GuestDashboard() {
         localStorage.setItem('guestProfile', JSON.stringify(data.user));
         setLoginError('');
         return;
+      } else if (data.error && data.error === 'Invalid password.') {
+        setLoginError('Incorrect password. Please try again.');
+        return;
       }
     } catch (err) {
       console.warn("Backend login failed or offline:", err);
