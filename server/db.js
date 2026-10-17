@@ -7,11 +7,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Support persistent disk via DATA_DIR environment variable
-const dataDir = process.env.DATA_DIR || __dirname;
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+let dataDir = process.env.DATA_DIR || __dirname;
+try {
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+} catch (err) {
+  console.warn(`Warning: Could not create DATA_DIR "${dataDir}" (${err.message}). Falling back to local __dirname.`);
+  dataDir = __dirname;
 }
 const dbPath = path.join(dataDir, 'database.sqlite');
+console.log(`[Database] SQLite database location: ${dbPath}`);
 const db = new Database(dbPath);
 
 // Initialize Schema

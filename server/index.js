@@ -14,10 +14,19 @@ app.use(cors());
 app.use(express.json());
 
 // Ensure uploads directory exists
-const dataDir = process.env.DATA_DIR || process.cwd();
-const uploadsDir = path.join(dataDir, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+let dataDir = process.env.DATA_DIR || process.cwd();
+let uploadsDir = path.join(dataDir, 'uploads');
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+} catch (err) {
+  console.warn(`Warning: Could not create uploadsDir "${uploadsDir}" (${err.message}). Falling back to local cwd.`);
+  dataDir = process.cwd();
+  uploadsDir = path.join(dataDir, 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
 }
 
 // Seed admin user
