@@ -78,15 +78,6 @@ export default function Footer() {
                 <span style={{ padding: '4px 10px', backgroundColor: '#FFFFFF', color: '#0A2540', borderRadius: 4, fontWeight: 600, fontSize: '0.8rem', border: '1px solid #D1D5DB' }}>Net Banking</span>
               </div>
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ padding: '6px 14px', borderRadius: 6, backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10B981', color: '#34D399', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                🔒 256-Bit SSL Encrypted & PCI-DSS Compliant
-              </div>
-              <div style={{ padding: '6px 14px', borderRadius: 6, backgroundColor: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3B82F6', color: '#60A5FA', fontSize: '0.78rem', fontWeight: 600 }}>
-                ICICI Bank Orange PG Ready
-              </div>
-            </div>
           </div>
           <p style={{ margin: '14px 0 0', fontSize: '0.75rem', color: '#6B7280' }}>
             * Service Fulfillment Notice: We offer hotel lodging, room reservations, and hospitality stays. No physical product delivery or courier shipping is involved; booking confirmations and tax invoices are delivered instantly via Email and SMS upon successful payment authorization.

@@ -562,16 +562,11 @@ export default function Booking() {
               Continue to Guest Details
             </button>
 
-            {/* ICICI Bank Orange PG & Accepted Card Brands Display */}
+            {/* Accepted Card Brands Display */}
             <div style={{ backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 8, padding: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Secure Payment Gateway
-                </span>
-                <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  🔒 256-Bit SSL
-                </span>
-              </div>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 8 }}>
+                Accepted Payment Methods
+              </span>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                 <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', backgroundColor: '#FFFFFF', border: '1px solid #D1D5DB', borderRadius: 4, color: '#1A1F71' }}>VISA</span>
                 <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', backgroundColor: '#FFFFFF', border: '1px solid #D1D5DB', borderRadius: 4, color: '#EB001B' }}>Mastercard</span>
@@ -581,7 +576,7 @@ export default function Booking() {
                 <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', backgroundColor: '#FFFFFF', border: '1px solid #D1D5DB', borderRadius: 4, color: '#0A2540' }}>NetBanking</span>
               </div>
               <p style={{ margin: 0, fontSize: '0.72rem', color: '#6B7280', lineHeight: 1.4 }}>
-                Powered by ICICI Bank Orange PG. No recurring charges. Confirmation is delivered instantly to your email & phone.
+                Instant confirmation delivered directly to your email and phone upon booking.
               </p>
             </div>
           </div>
@@ -844,13 +839,8 @@ export default function Booking() {
                 </label>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#F0FDF4', border: '1px solid #DCFCE7', borderRadius: 8, marginBottom: 20, fontSize: '0.78rem', color: '#166534' }}>
-                <span>Payment Mode: <strong>ICICI Bank Orange PG</strong></span>
-                <span>One-Time Charge (No Recurring Fee)</span>
-              </div>
-
               <button type="submit" style={{ width: '100%', padding: 16, borderRadius: 8, backgroundColor: 'var(--primary)', color: 'white', border: 'none', fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <CheckCircle size={20} /> Pay with ICICI Orange PG — ₹{totalPrice.toLocaleString()}
+                <CheckCircle size={20} /> Confirm & Pay — ₹{totalPrice.toLocaleString()}
               </button>
             </form>
           </div>
