@@ -29,22 +29,79 @@ export default function Footer() {
           <div>
             <h4 style={{ fontSize: '1.1rem', marginBottom: 20, fontFamily: 'var(--font-serif)' }}>Contact Information</h4>
             <ul style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 0, margin: 0, listStyle: 'none' }}>
-              <li style={{ color: '#9CA3AF', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 10 }}><MapPin size={16} /> 123 Hospitality Ave, Mumbai, India</li>
-              <li style={{ color: '#9CA3AF', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 10 }}><Phone size={16} /> +91 98765 43210</li>
-              <li style={{ color: '#9CA3AF', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 10 }}><Mail size={16} /> reservations@sabharwal.com</li>
+              <li style={{ color: '#9CA3AF', fontSize: '0.9rem', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <MapPin size={18} style={{ flexShrink: 0, marginTop: 2, color: '#38BDF8' }} />
+                <span>
+                  <strong>Sabharwal Hospitality Pvt. Ltd.</strong><br/>
+                  123 Hospitality Avenue, Nariman Point,<br/>
+                  Mumbai, Maharashtra - 400021, India
+                </span>
+              </li>
+              <li style={{ color: '#9CA3AF', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Phone size={16} style={{ color: '#38BDF8' }} />
+                <a href="tel:+919876543210" style={{ color: '#9CA3AF', textDecoration: 'none' }}>+91 98765 43210</a>
+              </li>
+              <li style={{ color: '#9CA3AF', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Mail size={16} style={{ color: '#38BDF8' }} />
+                <a href="mailto:reservations@sabharwal.com" style={{ color: '#9CA3AF', textDecoration: 'none' }}>reservations@sabharwal.com</a>
+              </li>
             </ul>
+
+            <div style={{ marginTop: 20 }}>
+              <h5 style={{ fontSize: '0.85rem', color: '#E5E7EB', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Connect With Us</h5>
+              <div style={{ display: 'flex', gap: 14 }}>
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style={{ color: '#9CA3AF', textDecoration: 'none', transition: 'color 0.2s', fontSize: '0.85rem' }}>Instagram</a>
+                <span style={{ color: '#4B5563' }}>•</span>
+                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style={{ color: '#9CA3AF', textDecoration: 'none', transition: 'color 0.2s', fontSize: '0.85rem' }}>Facebook</a>
+                <span style={{ color: '#4B5563' }}>•</span>
+                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" style={{ color: '#9CA3AF', textDecoration: 'none', transition: 'color 0.2s', fontSize: '0.85rem' }}>LinkedIn</a>
+                <span style={{ color: '#4B5563' }}>•</span>
+                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter / X" style={{ color: '#9CA3AF', textDecoration: 'none', transition: 'color 0.2s', fontSize: '0.85rem' }}>Twitter (X)</a>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Payment Gateways, Card Brands & Security Badges for ICICI Compliance */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 24, paddingBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
+            <div>
+              <span style={{ fontSize: '0.8rem', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 8 }}>
+                Accepted Payment Methods
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span style={{ padding: '4px 10px', backgroundColor: '#FFFFFF', color: '#1A1F71', borderRadius: 4, fontWeight: 700, fontSize: '0.8rem', border: '1px solid #D1D5DB' }}>VISA</span>
+                <span style={{ padding: '4px 10px', backgroundColor: '#FFFFFF', color: '#EB001B', borderRadius: 4, fontWeight: 700, fontSize: '0.8rem', border: '1px solid #D1D5DB' }}>Mastercard</span>
+                <span style={{ padding: '4px 10px', backgroundColor: '#FFFFFF', color: '#097939', borderRadius: 4, fontWeight: 700, fontSize: '0.8rem', border: '1px solid #D1D5DB' }}>RuPay</span>
+                <span style={{ padding: '4px 10px', backgroundColor: '#FFFFFF', color: '#006FCF', borderRadius: 4, fontWeight: 700, fontSize: '0.8rem', border: '1px solid #D1D5DB' }}>American Express</span>
+                <span style={{ padding: '4px 10px', backgroundColor: '#FFFFFF', color: '#5F259F', borderRadius: 4, fontWeight: 700, fontSize: '0.8rem', border: '1px solid #D1D5DB' }}>UPI / QR</span>
+                <span style={{ padding: '4px 10px', backgroundColor: '#FFFFFF', color: '#0A2540', borderRadius: 4, fontWeight: 600, fontSize: '0.8rem', border: '1px solid #D1D5DB' }}>Net Banking</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ padding: '6px 14px', borderRadius: 6, backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10B981', color: '#34D399', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                🔒 256-Bit SSL Encrypted & PCI-DSS Compliant
+              </div>
+              <div style={{ padding: '6px 14px', borderRadius: 6, backgroundColor: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3B82F6', color: '#60A5FA', fontSize: '0.78rem', fontWeight: 600 }}>
+                ICICI Bank Orange PG Ready
+              </div>
+            </div>
+          </div>
+          <p style={{ margin: '14px 0 0', fontSize: '0.75rem', color: '#6B7280' }}>
+            * Service Fulfillment Notice: We offer hotel lodging, room reservations, and hospitality stays. No physical product delivery or courier shipping is involved; booking confirmations and tax invoices are delivered instantly via Email and SMS upon successful payment authorization.
+          </p>
+        </div>
         
-        <div className="footer-bottom" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 30, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
-          <p style={{ color: '#6B7280', fontSize: '0.85rem', margin: 0 }}>&copy; {new Date().getFullYear()} Sabharwal Hospitality. All rights reserved.</p>
+        <div className="footer-bottom" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
+          <p style={{ color: '#6B7280', fontSize: '0.85rem', margin: 0 }}>&copy; {new Date().getFullYear()} Sabharwal Hospitality Pvt. Ltd. All rights reserved.</p>
           
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
             <Link to="/privacy" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '0.85rem' }}>Privacy Policy</Link>
             <span style={{ color: '#4B5563' }}>|</span>
-            <Link to="/terms" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '0.85rem' }}>Terms of Service</Link>
+            <Link to="/terms" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '0.85rem' }}>Terms & Conditions</Link>
             <span style={{ color: '#4B5563' }}>|</span>
-            <Link to="/cancellation" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '0.85rem' }}>Cancellation & Refund</Link>
+            <Link to="/cancellation" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '0.85rem' }}>Refund & Cancellation Policy</Link>
           </div>
 
           <p style={{ color: '#6B7280', fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>

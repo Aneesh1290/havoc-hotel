@@ -80,12 +80,36 @@ export default function TermsConditions() {
 
           <section style={{ marginBottom: 36 }}>
             <h2 style={{ fontSize: '1.4rem', color: '#111827', fontWeight: 700, marginBottom: 12 }}>
-              5. Pricing, Taxes & Payment
+              5. Pricing, Taxes & Payment Policy
             </h2>
             <ul style={{ paddingLeft: 24, marginTop: 8 }}>
-              <li>All displayed rates are subject to applicable Goods and Services Tax (GST) and statutory hotel cess as prescribed by the Government of India.</li>
-              <li>Any extra services availed during the stay (in-room dining, spa, chauffeur transfers, laundry) must be settled in full prior to checkout.</li>
+              <li>All displayed tariffs are shown transparently with a complete pre-payment cost breakdown: Base Room Tariff, applicable Goods and Services Tax (GST: 12% or 18% as per room tariff tier), and total payable amount.</li>
+              <li>Any extra on-property services availed during the stay (in-room dining, spa, chauffeur transfers, laundry) must be settled directly at the reception prior to checkout.</li>
             </ul>
+          </section>
+
+          <section style={{ marginBottom: 36 }}>
+            <h2 style={{ fontSize: '1.4rem', color: '#111827', fontWeight: 700, marginBottom: 12 }}>
+              6. One-Time Payment Guarantee (No Hidden / Recurring Charges)
+            </h2>
+            <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', padding: 20, borderRadius: 12 }}>
+              <p style={{ margin: 0, fontSize: '0.92rem', color: '#166534' }}>
+                <strong>No Recurring Debits:</strong> Every booking made through our portal or ICICI Bank Orange Payment Gateway is strictly a <strong>one-time transaction</strong> for the selected stay duration. Sabharwal Hospitality does not store recurring payment mandates, standing instructions, auto-debits, or continuous subscriptions. You will never be charged recurring fees without an express individual transaction authorized by you via OTP / 3D-Secure.
+              </p>
+            </div>
+          </section>
+
+          <section style={{ marginBottom: 36 }}>
+            <h2 style={{ fontSize: '1.4rem', color: '#111827', fontWeight: 700, marginBottom: 12 }}>
+              7. Service Fulfillment & Delivery Policy (Digital Booking Confirmation)
+            </h2>
+            <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', padding: 20, borderRadius: 12 }}>
+              <ul style={{ paddingLeft: 20, margin: 0, fontSize: '0.92rem', color: '#334155' }}>
+                <li><strong>No Physical Shipping:</strong> We provide hotel lodging and accommodation services. Physical courier delivery or postal dispatch is not applicable to our business model.</li>
+                <li><strong>Instant Digital Delivery:</strong> Upon successful authorization and confirmation through our payment gateway, your electronic Reservation Voucher, Booking ID, and GST Tax Invoice are delivered immediately to your registered email address and mobile number (within 5 minutes).</li>
+                <li><strong>Service Availability & Scope:</strong> Domestic and International travelers possessing valid government photo ID / passport are eligible to reserve rooms across our properties in Karwar, Sakleshpur, Bengaluru, and Dandeli.</li>
+              </ul>
+            </div>
           </section>
 
           <section style={{ marginBottom: 36 }}>

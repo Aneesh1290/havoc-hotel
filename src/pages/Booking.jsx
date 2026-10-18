@@ -555,11 +555,35 @@ export default function Booking() {
                 fontWeight: 600, 
                 fontSize: '1.05rem',
                 cursor: canContinue ? 'pointer' : 'not-allowed',
-                transition: 'background-color 0.2s'
+                transition: 'background-color 0.2s',
+                marginBottom: 16
               }}
             >
-              Continue
+              Continue to Guest Details
             </button>
+
+            {/* ICICI Bank Orange PG & Accepted Card Brands Display */}
+            <div style={{ backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 8, padding: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Secure Payment Gateway
+                </span>
+                <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  🔒 256-Bit SSL
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', backgroundColor: '#FFFFFF', border: '1px solid #D1D5DB', borderRadius: 4, color: '#1A1F71' }}>VISA</span>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', backgroundColor: '#FFFFFF', border: '1px solid #D1D5DB', borderRadius: 4, color: '#EB001B' }}>Mastercard</span>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', backgroundColor: '#FFFFFF', border: '1px solid #D1D5DB', borderRadius: 4, color: '#097939' }}>RuPay</span>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', backgroundColor: '#FFFFFF', border: '1px solid #D1D5DB', borderRadius: 4, color: '#006FCF' }}>Amex</span>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', backgroundColor: '#FFFFFF', border: '1px solid #D1D5DB', borderRadius: 4, color: '#5F259F' }}>UPI</span>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', backgroundColor: '#FFFFFF', border: '1px solid #D1D5DB', borderRadius: 4, color: '#0A2540' }}>NetBanking</span>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.72rem', color: '#6B7280', lineHeight: 1.4 }}>
+                Powered by ICICI Bank Orange PG. No recurring charges. Confirmation is delivered instantly to your email & phone.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -803,13 +827,30 @@ export default function Booking() {
                 <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: 8, minHeight: 70, resize: 'vertical' }} placeholder="Any special requirements..." />
               </div>
 
-              {/* Legal Check-in & ID Notice */}
-              <div style={{ backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 8, padding: '12px 14px', marginBottom: 20, fontSize: '0.8rem', color: '#4B5563', lineHeight: 1.4 }}>
-                <span style={{ fontWeight: 600, color: '#111827' }}>⚠️ Check-in Mandatory Policy:</span> Primary guest must present an original government-issued photo ID (Aadhaar, Passport, DL, or Voter ID). By clicking Confirm, you agree to our <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#2563EB' }}>Terms</a> & <a href="/cancellation" target="_blank" rel="noopener noreferrer" style={{ color: '#2563EB' }}>Cancellation Rules</a>.
+              {/* Legal Policies Consent Checkboxes for Bank & Regulatory Compliance */}
+              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: '14px', marginBottom: 20 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.82rem', color: '#334155', cursor: 'pointer', marginBottom: 10 }}>
+                  <input type="checkbox" required style={{ marginTop: 3 }} />
+                  <span>
+                    I accept the <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#2563EB', fontWeight: 600 }}>Terms & Conditions</a> and <a href="/cancellation" target="_blank" rel="noopener noreferrer" style={{ color: '#2563EB', fontWeight: 600 }}>Cancellation & Refund Policy</a>.
+                  </span>
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.82rem', color: '#334155', cursor: 'pointer' }}>
+                  <input type="checkbox" required style={{ marginTop: 3 }} />
+                  <span>
+                    I agree to the <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#2563EB', fontWeight: 600 }}>Privacy Policy</a> and confirm that all adult guests will carry original government-issued photo ID at check-in.
+                  </span>
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#F0FDF4', border: '1px solid #DCFCE7', borderRadius: 8, marginBottom: 20, fontSize: '0.78rem', color: '#166534' }}>
+                <span>Payment Mode: <strong>ICICI Bank Orange PG</strong></span>
+                <span>One-Time Charge (No Recurring Fee)</span>
               </div>
 
               <button type="submit" style={{ width: '100%', padding: 16, borderRadius: 8, backgroundColor: 'var(--primary)', color: 'white', border: 'none', fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <CheckCircle size={20} /> Confirm Booking — ₹{totalPrice.toLocaleString()}
+                <CheckCircle size={20} /> Pay with ICICI Orange PG — ₹{totalPrice.toLocaleString()}
               </button>
             </form>
           </div>

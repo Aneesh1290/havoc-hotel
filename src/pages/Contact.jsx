@@ -16,22 +16,38 @@ export default function Contact() {
         <div className="contact-grid">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
             <div>
-              <h3 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-serif)', marginBottom: 16 }}>Head Office</h3>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, color: '#4B5563', marginBottom: 12 }}>
+              <h3 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-serif)', marginBottom: 16 }}>Registered Corporate Office</h3>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, color: '#4B5563', marginBottom: 14 }}>
                 <MapPin size={20} style={{ flexShrink: 0, marginTop: 2 }} color="var(--primary)" />
-                <span>123 Hospitality Ave<br/>Mumbai, Maharashtra 400001<br/>India</span>
+                <span>
+                  <strong>Sabharwal Hospitality Pvt. Ltd.</strong><br/>
+                  123 Hospitality Avenue, Nariman Point,<br/>
+                  Mumbai, Maharashtra - 400021, India
+                </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#4B5563', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#4B5563', marginBottom: 14 }}>
                 <Phone size={20} color="var(--primary)" />
-                <span>+91 98765 43210</span>
+                <span>+91 98765 43210 (24x7 Guest Desk)</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#4B5563' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#4B5563', marginBottom: 14 }}>
                 <Mail size={20} color="var(--primary)" />
                 <span>reservations@sabharwal.com</span>
               </div>
+              <div style={{ backgroundColor: '#F9FAFB', padding: '16px', borderRadius: 10, border: '1px solid #E5E7EB', marginTop: 12 }}>
+                <div style={{ fontSize: '0.85rem', color: '#111827', fontWeight: 600, marginBottom: 4 }}>Operating Hours:</div>
+                <div style={{ fontSize: '0.82rem', color: '#6B7280' }}>Front Desk & Reservations: 24 Hours / 7 Days a week</div>
+                <div style={{ fontSize: '0.82rem', color: '#6B7280', marginTop: 4 }}>Corporate & Billing Support: Mon - Sat (9:30 AM - 6:30 PM IST)</div>
+              </div>
             </div>
-            
 
+            <div>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 600, color: '#111827', marginBottom: 12 }}>Official Social Channels</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.9rem' }}>
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>📸 Instagram: @sabharwal_hospitality</a>
+                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>👥 Facebook: facebook.com/sabharwalhospitality</a>
+                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>💼 LinkedIn: linkedin.com/company/sabharwal-hospitality</a>
+              </div>
+            </div>
           </div>
           
           <div style={{ backgroundColor: 'white', borderRadius: 16, padding: 32, boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
