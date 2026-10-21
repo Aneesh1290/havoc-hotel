@@ -147,7 +147,7 @@ try {
   db.exec("DELETE FROM room_types WHERE propertyId NOT IN (SELECT id FROM properties)");
 } catch (e) {}
 
-// Seed initial properties if empty
+// Seed default properties only if database is completely brand new
 const countProps = db.prepare('SELECT count(*) as count FROM properties').get();
 if (countProps.count === 0) {
   const insertProp = db.prepare(`
@@ -155,32 +155,44 @@ if (countProps.count === 0) {
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
   
-  const seedProperties = [
+  // Real Sabharwal Hotels default setup instead of old generic beach/hill dummy hotels
+  const defaultProperties = [
     {
-      id: 'beach-resort', name: 'Sabharwal Beach Resort', location: 'Karwar, Karnataka', image: '/images/property_1.jpg', roomsAvailable: 42, pricePerNight: 8000,
-      amenities: JSON.stringify([{ name: 'Beachfront', icon: 'Waves' }, { name: 'Restaurant', icon: 'Coffee' }, { name: 'Free WiFi', icon: 'Wifi' }, { name: 'Swimming Pool', icon: 'Waves' }])
+      id: '1790867613159',
+      name: 'Hotel Sabharwal Viceroy',
+      location: 'Karwar, Karnataka',
+      image: '/images/property_1.jpg',
+      roomsAvailable: 6,
+      pricePerNight: 2500,
+      amenities: JSON.stringify([{ name: 'AC & Non-AC Rooms', icon: 'BedDouble' }, { name: 'Restaurant', icon: 'Coffee' }, { name: 'Free WiFi', icon: 'Wifi' }, { name: 'Parking', icon: 'Car' }])
     },
     {
-      id: 'hill-retreat', name: 'Sabharwal Hill Retreat', location: 'Sakleshpur, Karnataka', image: '/images/property_2.jpg', roomsAvailable: 15, pricePerNight: 6000,
-      amenities: JSON.stringify([{ name: 'Hill View', icon: 'Mountain' }, { name: 'Restaurant', icon: 'Coffee' }, { name: 'Free WiFi', icon: 'Wifi' }, { name: 'Parking', icon: 'Car' }])
+      id: '1790867785453',
+      name: 'Hotel Sabharwal Inn',
+      location: 'Karwar, Karnataka',
+      image: '/images/property_2.jpg',
+      roomsAvailable: 10,
+      pricePerNight: 2200,
+      amenities: JSON.stringify([{ name: 'Central Location', icon: 'MapPin' }, { name: 'Free WiFi', icon: 'Wifi' }, { name: 'Room Service', icon: 'Coffee' }])
     },
     {
-      id: 'city-stay', name: 'Sabharwal City Stay', location: 'Bengaluru, Karnataka', image: '/images/property_3.jpg', roomsAvailable: 120, pricePerNight: 4500,
-      amenities: JSON.stringify([{ name: 'Central Location', icon: 'MapPin' }, { name: 'Restaurant', icon: 'Coffee' }, { name: 'Free WiFi', icon: 'Wifi' }, { name: 'Gym', icon: 'Dumbbell' }])
-    },
-    {
-      id: 'lake-view', name: 'Sabharwal Lake View', location: 'Dandeli, Karnataka', image: '/images/property_4.jpg', roomsAvailable: 28, pricePerNight: 7000,
-      amenities: JSON.stringify([{ name: 'Lake View', icon: 'Waves' }, { name: 'Restaurant', icon: 'Coffee' }, { name: 'Free WiFi', icon: 'Wifi' }, { name: 'Adventure', icon: 'Tent' }])
+      id: '1790867813682',
+      name: 'Hotel Sabharwal Residency',
+      location: 'Karwar, Karnataka',
+      image: '/images/property_3.jpg',
+      roomsAvailable: 15,
+      pricePerNight: 2800,
+      amenities: JSON.stringify([{ name: 'Deluxe Rooms', icon: 'BedDouble' }, { name: 'Restaurant', icon: 'Coffee' }, { name: 'Free WiFi', icon: 'Wifi' }, { name: 'Parking', icon: 'Car' }])
     }
   ];
 
   const transaction = db.transaction((props) => {
     for (const p of props) insertProp.run(p.id, p.name, p.location, p.image, p.roomsAvailable, p.pricePerNight, p.amenities);
   });
-  transaction(seedProperties);
+  transaction(defaultProperties);
 }
 
-// Seed initial rooms if empty
+// Seed actual rooms if empty
 const countRooms = db.prepare('SELECT count(*) as count FROM room_types').get();
 if (countRooms.count === 0) {
   const insertRoom = db.prepare(`
@@ -188,19 +200,20 @@ if (countRooms.count === 0) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
   
-  const seedRooms = [
-    { id: 'room-1', propertyId: 'beach-resort', name: 'Ocean View Suite', type: 'Suite', pricePerNight: 12000, capacity: 4, totalUnits: 5, images: '[]' },
-    { id: 'room-2', propertyId: 'beach-resort', name: 'Premium Room (Twin Bedded)', type: 'Premium', pricePerNight: 8000, capacity: 2, totalUnits: 15, images: '[]' },
-    { id: 'room-3', propertyId: 'beach-resort', name: 'Standard Garden View', type: 'Standard', pricePerNight: 5000, capacity: 2, totalUnits: 22, images: '[]' },
-    { id: 'room-4', propertyId: 'hill-retreat', name: 'Valley View Cottage', type: 'Cottage', pricePerNight: 9000, capacity: 3, totalUnits: 10, images: '[]' },
-    { id: 'room-5', propertyId: 'city-stay', name: 'Executive Suite', type: 'Suite', pricePerNight: 8500, capacity: 2, totalUnits: 20, images: '[]' },
-    { id: 'room-6', propertyId: 'city-stay', name: 'Business Standard', type: 'Standard', pricePerNight: 4500, capacity: 2, totalUnits: 100, images: '[]' },
+  const defaultRooms = [
+    { id: 'room-1790868536019', propertyId: '1790867613159', name: 'Double Room - Non A/c', type: 'Standard', pricePerNight: 1500, capacity: 2, totalUnits: 1, images: '[]' },
+    { id: 'room-1790868574982', propertyId: '1790867613159', name: 'Double Room - A/C', type: 'Deluxe', pricePerNight: 2200, capacity: 2, totalUnits: 5, images: '[]' },
+    { id: 'room-1790868896251', propertyId: '1790867785453', name: 'Deluxe Room - A/C', type: 'Deluxe', pricePerNight: 2200, capacity: 2, totalUnits: 5, images: '[]' },
+    { id: 'room-1790868950646', propertyId: '1790867785453', name: 'Standard Room - A/C', type: 'Standard', pricePerNight: 1800, capacity: 2, totalUnits: 5, images: '[]' },
+    { id: 'room-1790869136628', propertyId: '1790867813682', name: 'Double Deluxe Room', type: 'Deluxe', pricePerNight: 2500, capacity: 2, totalUnits: 5, images: '[]' },
+    { id: 'room-1790869177081', propertyId: '1790867813682', name: 'Triple Deluxe Room AC', type: 'Deluxe', pricePerNight: 3200, capacity: 3, totalUnits: 5, images: '[]' },
+    { id: 'room-1790869209625', propertyId: '1790867813682', name: 'Triple Deluxe Room Non-AC', type: 'Standard', pricePerNight: 2600, capacity: 3, totalUnits: 5, images: '[]' }
   ];
 
   const transaction = db.transaction((rooms) => {
     for (const r of rooms) insertRoom.run(r.id, r.propertyId, r.name, r.type, r.pricePerNight, r.capacity, r.totalUnits, r.images);
   });
-  transaction(seedRooms);
+  transaction(defaultRooms);
 }
 
 export default db;
