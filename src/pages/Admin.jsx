@@ -541,6 +541,29 @@ function GuestsView() {
     fetchGuests();
   }, []);
 
+  const handleDeleteGuest = async (guest) => {
+    if (!window.confirm(`Are you sure you want to delete guest account "${guest.name}" (${guest.email})?`)) {
+      return;
+    }
+
+    try {
+      if (guest.id) {
+        await fetch(`/api/guests/${guest.id}`, { method: 'DELETE' });
+      }
+      // Also update local storage if fallback was used
+      const saved = localStorage.getItem('registeredUsers');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const filtered = parsed.filter(u => u.email !== guest.email && u.id !== guest.id);
+        localStorage.setItem('registeredUsers', JSON.stringify(filtered));
+      }
+      setGuests(prev => prev.filter(g => g.email !== guest.email && (!guest.id || g.id !== guest.id)));
+    } catch (err) {
+      console.error("Failed to delete guest:", err);
+      alert("Failed to delete guest account.");
+    }
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -558,29 +581,52 @@ function GuestsView() {
               <th style={{ textAlign: 'left', padding: '16px 24px', fontWeight: 600 }}>Email Address</th>
               <th style={{ textAlign: 'left', padding: '16px 24px', fontWeight: 600 }}>Phone Number</th>
               <th style={{ textAlign: 'left', padding: '16px 24px', fontWeight: 600 }}>Status</th>
+              <th style={{ textAlign: 'right', padding: '16px 24px', fontWeight: 600 }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {guests.map((g, i) => (
-              <tr key={i} style={{ borderBottom: i === guests.length - 1 ? 'none' : '1px solid #E5E7EB' }}>
+              <tr key={g.id || i} style={{ borderBottom: i === guests.length - 1 ? 'none' : '1px solid #E5E7EB' }}>
                 <td style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, color: '#3B82F6' }}>
-                    {g.name.charAt(0)}
+                    {g.name?.charAt(0) || 'G'}
                   </div>
                   <span style={{ fontWeight: 500, color: '#111827' }}>{g.name}</span>
                 </td>
                 <td style={{ padding: '16px 24px', color: '#4B5563' }}>{g.email}</td>
-                <td style={{ padding: '16px 24px', color: '#4B5563' }}>{g.phone}</td>
+                <td style={{ padding: '16px 24px', color: '#4B5563' }}>{g.phone || 'N/A'}</td>
                 <td style={{ padding: '16px 24px' }}>
                   <span style={{ padding: '6px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, color: '#10B981', backgroundColor: '#ECFDF5' }}>
                     Active
                   </span>
                 </td>
+                <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                  <button 
+                    onClick={() => handleDeleteGuest(g)}
+                    title="Delete guest account"
+                    style={{ 
+                      color: '#EF4444', 
+                      background: 'none', 
+                      border: 'none', 
+                      padding: 8, 
+                      cursor: 'pointer',
+                      borderRadius: 6,
+                      transition: 'background 0.2s',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEE2E2'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </td>
               </tr>
             ))}
             {guests.length === 0 && (
               <tr>
-                <td colSpan="4" style={{ padding: '40px 24px', textAlign: 'center', color: '#6B7280' }}>
+                <td colSpan="5" style={{ padding: '40px 24px', textAlign: 'center', color: '#6B7280' }}>
                   No guests have registered yet.
                 </td>
               </tr>

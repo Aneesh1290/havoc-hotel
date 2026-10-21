@@ -383,6 +383,16 @@ app.get('/api/guests', (req, res) => {
   }
 });
 
+app.delete('/api/guests/:id', (req, res) => {
+  try {
+    const stmt = db.prepare('DELETE FROM guests WHERE id = ?');
+    stmt.run(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/guests/register', (req, res) => {
   const { name, email, phone, password } = req.body;
   try {
