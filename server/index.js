@@ -145,8 +145,11 @@ app.post('/api/properties', (req, res) => {
 
 app.delete('/api/properties/:id', (req, res) => {
   try {
+    const propId = req.params.id;
+    // Delete associated rooms first to avoid orphaned rooms
+    db.prepare('DELETE FROM room_types WHERE propertyId = ?').run(propId);
     const stmt = db.prepare('DELETE FROM properties WHERE id = ?');
-    stmt.run(req.params.id);
+    stmt.run(propId);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });

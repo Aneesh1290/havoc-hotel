@@ -142,6 +142,11 @@ try {
   db.exec("ALTER TABLE bookings ADD COLUMN notes TEXT");
 } catch (e) {}
 
+// Cleanup orphaned room types (rooms referencing non-existent properties)
+try {
+  db.exec("DELETE FROM room_types WHERE propertyId NOT IN (SELECT id FROM properties)");
+} catch (e) {}
+
 // Seed initial properties if empty
 const countProps = db.prepare('SELECT count(*) as count FROM properties').get();
 if (countProps.count === 0) {

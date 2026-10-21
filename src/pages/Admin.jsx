@@ -257,9 +257,11 @@ export default function Admin() {
 function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, rooms, adminProfile }) {
   const [today, setToday] = useState(startOfDay(new Date()));
 
-  // Calculate actual total capacity based strictly on all room types added to properties
-  const totalRooms = Array.isArray(rooms)
-    ? rooms.reduce((sum, r) => sum + (Number(r.totalUnits) || 0), 0) 
+  // Calculate actual total capacity based strictly on active properties and their room types
+  const activePropIds = new Set((properties || []).map(p => p.id));
+  const validRooms = Array.isArray(rooms) ? rooms.filter(r => activePropIds.has(r.propertyId)) : [];
+  const totalRooms = validRooms.length > 0
+    ? validRooms.reduce((sum, r) => sum + (Number(r.totalUnits) || 0), 0) 
     : properties.reduce((sum, p) => sum + (Number(p.roomsAvailable) || 0), 0);
   
   const activeBookingsToday = bookings.filter(b => {
