@@ -85,11 +85,7 @@ export const HotelProvider = ({ children }) => {
     }
   };
 
-  const [offers, setOffers] = useState(() => {
-    const saved = localStorage.getItem('hotelOffers');
-    if (saved) return JSON.parse(saved);
-    return [];
-  });
+  const [offers, setOffers] = useState([]);
 
   const addOffer = async (newOffer) => {
     setOffers(prev => [newOffer, ...prev]);

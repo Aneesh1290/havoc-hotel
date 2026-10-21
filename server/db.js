@@ -85,13 +85,10 @@ db.exec(`
   );
 `);
 
-// Seed default offers if empty
-const countOffers = db.prepare('SELECT count(*) as count FROM offers').get();
-if (countOffers.count === 0) {
-  const insertOffer = db.prepare('INSERT INTO offers (id, title, description, code, status, expires) VALUES (?, ?, ?, ?, ?, ?)');
-  insertOffer.run(1, 'Winter Getaway 20% Off', 'Book any stay for 3 or more nights this winter and enjoy a flat 20% discount on your entire booking.', 'WINTER20', 'Active', '30 days');
-  insertOffer.run(2, 'Early Bird Special', 'Plan ahead! Book 30 days in advance and receive a complimentary room upgrade and breakfast.', 'EARLYBIRD', 'Active', '60 days');
-}
+// Purge any automatic test dummy offers
+try {
+  db.exec("DELETE FROM offers WHERE code IN ('WINTER20', 'EARLYBIRD')");
+} catch (e) {}
 
 // Seed default settings if empty
 const getSetting = db.prepare('SELECT value FROM settings WHERE key = ?');
