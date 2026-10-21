@@ -6,7 +6,7 @@ import {
   Archive, Users, CreditCard, FileText, Tag, Image as ImageIcon, 
   Settings, Search, Bell, Plus, Headset, CalendarCheck, Wallet, 
   PieChart, Users as UsersIcon, ArrowRight, MapPin, Edit2, Trash2, Check, X, MoreVertical,
-  Clock, CheckCircle, Mail, Send
+  Clock, CheckCircle, Mail, Send, Copy
 } from 'lucide-react';
 import { format, isSameDay, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
 
@@ -1007,6 +1007,79 @@ function RoomsView({ properties, rooms, addRoomType, removeRoomType, updateRoomT
     id: '', name: '', type: 'Standard', pricePerNight: 0, capacity: 2, totalUnits: 1, images: []
   });
 
+  // Copy inventory states
+  const [copyModalData, setCopyModalData] = useState({
+    isOpen: false,
+    mode: 'single', // 'single' room or 'all' rooms of a property
+    sourceRoom: null,
+    sourceProperty: null,
+    targetPropertyId: ''
+  });
+
+  const handleOpenCopySingle = (room) => {
+    const srcProp = properties.find(p => p.id === room.propertyId);
+    const otherProps = properties.filter(p => p.id !== room.propertyId);
+    setCopyModalData({
+      isOpen: true,
+      mode: 'single',
+      sourceRoom: room,
+      sourceProperty: srcProp,
+      targetPropertyId: otherProps.length > 0 ? otherProps[0].id : ''
+    });
+  };
+
+  const handleOpenCopyAll = (sourceProperty) => {
+    const otherProps = properties.filter(p => p.id !== sourceProperty.id);
+    setCopyModalData({
+      isOpen: true,
+      mode: 'all',
+      sourceRoom: null,
+      sourceProperty,
+      targetPropertyId: otherProps.length > 0 ? otherProps[0].id : ''
+    });
+  };
+
+  const handleExecuteCopy = async () => {
+    if (!copyModalData.targetPropertyId) {
+      return alert("Please select a target property.");
+    }
+
+    if (copyModalData.mode === 'single' && copyModalData.sourceRoom) {
+      const src = copyModalData.sourceRoom;
+      const copiedRoom = {
+        name: src.name,
+        type: src.type,
+        pricePerNight: src.pricePerNight,
+        capacity: src.capacity,
+        totalUnits: src.totalUnits,
+        images: src.images || [],
+        propertyId: copyModalData.targetPropertyId
+      };
+      await addRoomType(copiedRoom);
+      alert(`Room "${src.name}" successfully copied to selected property!`);
+    } else if (copyModalData.mode === 'all' && copyModalData.sourceProperty) {
+      const propRooms = rooms.filter(r => r.propertyId === copyModalData.sourceProperty.id);
+      if (propRooms.length === 0) {
+        return alert("There are no rooms in this property to copy.");
+      }
+      for (const r of propRooms) {
+        const copiedRoom = {
+          name: r.name,
+          type: r.type,
+          pricePerNight: r.pricePerNight,
+          capacity: r.capacity,
+          totalUnits: r.totalUnits,
+          images: r.images || [],
+          propertyId: copyModalData.targetPropertyId
+        };
+        await addRoomType(copiedRoom);
+      }
+      alert(`All ${propRooms.length} room types copied successfully to target property!`);
+    }
+
+    setCopyModalData({ isOpen: false, mode: 'single', sourceRoom: null, sourceProperty: null, targetPropertyId: '' });
+  };
+
   const handleOpenAdd = (propId) => {
     setSelectedPropertyId(propId);
     setRoomForm({ id: '', name: '', type: 'Standard', pricePerNight: 0, capacity: 2, totalUnits: 1, images: [] });
@@ -1098,12 +1171,23 @@ function RoomsView({ properties, rooms, addRoomType, removeRoomType, updateRoomT
                     <p style={{ fontSize: '0.85rem', color: '#6B7280', margin: 0 }}>{p.location} • {propRooms.length} Room Types</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => handleOpenAdd(p.id)}
-                  style={{ backgroundColor: 'white', color: '#111827', padding: '8px 16px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 500, fontSize: '0.85rem', border: '1px solid #D1D5DB', cursor: 'pointer' }}
-                >
-                  <Plus size={16} /> Add Room Type
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {propRooms.length > 0 && properties.length > 1 && (
+                    <button 
+                      onClick={() => handleOpenCopyAll(p)}
+                      title="Copy all rooms from this property to another hotel"
+                      style={{ backgroundColor: 'white', color: '#4B5563', padding: '8px 14px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500, fontSize: '0.85rem', border: '1px solid #D1D5DB', cursor: 'pointer' }}
+                    >
+                      <Copy size={15} color="#4B5563" /> Copy All to Another Hotel
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => handleOpenAdd(p.id)}
+                    style={{ backgroundColor: 'var(--primary)', color: 'white', padding: '8px 16px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 500, fontSize: '0.85rem', border: 'none', cursor: 'pointer' }}
+                  >
+                    <Plus size={16} /> Add Room Type
+                  </button>
+                </div>
               </div>
               
               <div style={{ padding: '0' }}>
@@ -1129,9 +1213,19 @@ function RoomsView({ properties, rooms, addRoomType, removeRoomType, updateRoomT
                           <td style={{ padding: '16px 24px', color: '#4B5563', fontSize: '0.9rem', fontWeight: 500 }}>{r.totalUnits}</td>
                           <td style={{ padding: '16px 24px', color: '#10B981', fontSize: '0.95rem', fontWeight: 600 }}>₹{(r.pricePerNight || 0).toLocaleString()}</td>
                           <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                            <button onClick={() => handleOpenEdit(r)} style={{ color: '#3B82F6', background: 'none', border: 'none', padding: 8, cursor: 'pointer' }}><Edit2 size={16} /></button>
+                            {properties.length > 1 && (
+                              <button 
+                                onClick={() => handleOpenCopySingle(r)} 
+                                title="Copy this room type to another property" 
+                                style={{ color: '#059669', background: 'none', border: 'none', padding: 8, cursor: 'pointer', marginRight: 4 }}
+                              >
+                                <Copy size={16} />
+                              </button>
+                            )}
+                            <button onClick={() => handleOpenEdit(r)} title="Edit room" style={{ color: '#3B82F6', background: 'none', border: 'none', padding: 8, cursor: 'pointer' }}><Edit2 size={16} /></button>
                             <button 
                               onClick={() => { if (window.confirm('Delete this room type?')) removeRoomType(r.id); }}
+                              title="Delete room"
                               style={{ color: '#EF4444', background: 'none', border: 'none', padding: 8, cursor: 'pointer' }}
                             >
                               <Trash2 size={16} />
@@ -1215,6 +1309,94 @@ function RoomsView({ properties, rooms, addRoomType, removeRoomType, updateRoomT
                 <button type="submit" style={{ padding: '10px 20px', borderRadius: 8, backgroundColor: 'var(--primary)', color: 'white', border: 'none', cursor: 'pointer' }}>{isEditing ? 'Update Room' : 'Save Room Type'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Copy Inventory Modal */}
+      {copyModalData.isOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(17, 24, 39, 0.6)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ backgroundColor: 'white', width: '100%', maxWidth: 480, borderRadius: 16, overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#059669' }}>
+                  <Copy size={18} />
+                </div>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#111827', margin: 0 }}>
+                  {copyModalData.mode === 'all' ? 'Copy All Room Inventory' : 'Copy Room Type'}
+                </h2>
+              </div>
+              <button onClick={() => setCopyModalData(prev => ({ ...prev, isOpen: false }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              <div style={{ backgroundColor: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB', marginBottom: 20 }}>
+                <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#6B7280', fontWeight: 600, marginBottom: 4 }}>
+                  Source {copyModalData.mode === 'all' ? 'Property' : 'Room'}
+                </div>
+                {copyModalData.mode === 'all' ? (
+                  <div style={{ fontWeight: 600, color: '#111827', fontSize: '1rem' }}>
+                    {copyModalData.sourceProperty?.name}
+                    <span style={{ display: 'block', fontSize: '0.85rem', color: '#059669', fontWeight: 500, marginTop: 2 }}>
+                      {rooms.filter(r => r.propertyId === copyModalData.sourceProperty?.id).length} room type(s) will be cloned
+                    </span>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontWeight: 600, color: '#111827', fontSize: '1rem' }}>
+                      {copyModalData.sourceRoom?.name} ({copyModalData.sourceRoom?.type})
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: '#6B7280', marginTop: 2 }}>
+                      ₹{(copyModalData.sourceRoom?.pricePerNight || 0).toLocaleString()} • {copyModalData.sourceRoom?.totalUnits} units • {copyModalData.sourceRoom?.capacity} guests
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>
+                  Select Destination Property:
+                </label>
+                <select 
+                  value={copyModalData.targetPropertyId}
+                  onChange={e => setCopyModalData(prev => ({ ...prev, targetPropertyId: e.target.value }))}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.95rem', backgroundColor: 'white' }}
+                >
+                  {properties
+                    .filter(p => copyModalData.mode === 'all' 
+                      ? p.id !== copyModalData.sourceProperty?.id 
+                      : p.id !== copyModalData.sourceRoom?.propertyId
+                    )
+                    .map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.location})
+                      </option>
+                    ))}
+                </select>
+                <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
+                  This will duplicate the room configuration and total units into the destination hotel inventory.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                <button 
+                  type="button" 
+                  onClick={() => setCopyModalData(prev => ({ ...prev, isOpen: false }))} 
+                  style={{ padding: '10px 18px', borderRadius: 8, border: '1px solid #D1D5DB', background: 'white', cursor: 'pointer', fontWeight: 500 }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  onClick={handleExecuteCopy}
+                  style={{ padding: '10px 22px', borderRadius: 8, backgroundColor: '#059669', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Copy size={16} /> Confirm & Copy
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
