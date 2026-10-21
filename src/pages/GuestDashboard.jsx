@@ -782,25 +782,6 @@ export default function GuestDashboard() {
         <div className="dashboard-sidebar" style={{ width: 300, flexShrink: 0 }}>
           <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '28px 20px', border: '1px solid #E5E7EB', position: 'sticky', top: 30, display: 'flex', flexDirection: 'column', gap: 24, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)' }}>
             
-            {/* VIP Member Tier Card */}
-            <div style={{ background: 'linear-gradient(135deg, #0A192F 0%, #1E3A8A 100%)', borderRadius: 16, padding: '20px', color: 'white', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                <div>
-                  <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 1.5, opacity: 0.8, fontWeight: 600 }}>Guest Loyalty Club</div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 700, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Sparkles size={18} color="#FBBF24" /> {userBookings.length >= 3 ? 'Gold Elite Tier' : userBookings.length >= 1 ? 'Silver Member' : 'Club Member'}
-                  </div>
-                </div>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Award size={20} color="#FCD34D" />
-                </div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.15)', fontSize: '0.85rem' }}>
-                <span style={{ opacity: 0.85 }}>Reward Points</span>
-                <span style={{ fontWeight: 700, color: '#FCD34D' }}>{(userBookings.filter(b => b.status !== 'Cancelled').length * 450) + 200} pts</span>
-              </div>
-            </div>
-
             {/* Navigation Menu */}
             <div>
               <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 10, paddingLeft: 12 }}>Guest Portal</div>
@@ -817,20 +798,6 @@ export default function GuestDashboard() {
                       {userBookings.length}
                     </span>
                   )}
-                </button>
-
-                <button 
-                  onClick={() => setActiveTab('rewards')}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, border: 'none', backgroundColor: activeTab === 'rewards' ? '#EFF6FF' : 'transparent', color: activeTab === 'rewards' ? '#1D4ED8' : '#4B5563', fontWeight: activeTab === 'rewards' ? 600 : 500, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', fontSize: '0.95rem' }}
-                >
-                  <Gift size={18} color={activeTab === 'rewards' ? '#1D4ED8' : '#6B7280'} /> Membership & Rewards
-                </button>
-
-                <button 
-                  onClick={() => setActiveTab('offers')}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, border: 'none', backgroundColor: activeTab === 'offers' ? '#EFF6FF' : 'transparent', color: activeTab === 'offers' ? '#1D4ED8' : '#4B5563', fontWeight: activeTab === 'offers' ? 600 : 500, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', fontSize: '0.95rem' }}
-                >
-                  <Tag size={18} color={activeTab === 'offers' ? '#1D4ED8' : '#6B7280'} /> Exclusive Offers
                 </button>
 
                 <button 
@@ -1013,134 +980,6 @@ export default function GuestDashboard() {
             </div>
           )}
 
-          {activeTab === 'rewards' && (
-            <div>
-              <div style={{ marginBottom: 28 }}>
-                <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#111827', marginBottom: 6, fontFamily: 'var(--font-serif)' }}>Membership & Rewards</h1>
-                <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>Track your loyalty perks, tier benefits, and points earned across your stays.</p>
-              </div>
-
-              {/* Status Header Banner */}
-              <div style={{ background: 'linear-gradient(135deg, #0A192F 0%, #1E3A8A 50%, #312E81 100%)', borderRadius: 20, padding: 32, color: 'white', marginBottom: 32, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
-                  <div>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', fontSize: '0.8rem', fontWeight: 600, color: '#FCD34D', marginBottom: 12 }}>
-                      <Sparkles size={14} /> VIP Guest Status
-                    </span>
-                    <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: '0 0 6px' }}>{guestProfile.name}</h2>
-                    <div style={{ opacity: 0.85, fontSize: '0.9rem' }}>Member ID: SH-GUEST-{guestProfile.id || '2026'} • Member since 2026</div>
-                  </div>
-                  <div style={{ textAlign: 'right', backgroundColor: 'rgba(255,255,255,0.1)', padding: '16px 24px', borderRadius: 16 }}>
-                    <div style={{ fontSize: '0.8rem', opacity: 0.85, textTransform: 'uppercase', letterSpacing: 1 }}>Available Balance</div>
-                    <div style={{ fontSize: '2rem', fontWeight: 800, color: '#FCD34D', lineHeight: 1.2 }}>
-                      {(userBookings.filter(b => b.status !== 'Cancelled').length * 450) + 200}
-                      <span style={{ fontSize: '1rem', fontWeight: 500, color: 'white', marginLeft: 6 }}>pts</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.15)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 8 }}>
-                    <span>Next Tier Progress: Gold Elite</span>
-                    <span>{userBookings.filter(b => b.status !== 'Cancelled').length} / 3 Stays Completed</span>
-                  </div>
-                  <div style={{ width: '100%', height: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 4, overflow: 'hidden' }}>
-                    <div style={{ width: `${Math.min(100, (userBookings.filter(b => b.status !== 'Cancelled').length / 3) * 100)}%`, height: '100%', backgroundColor: '#FCD34D', borderRadius: 4 }}></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Perks Grid */}
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#111827', marginBottom: 16 }}>Your Unlocked Privileges</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20, marginBottom: 32 }}>
-                <div style={{ backgroundColor: 'white', padding: 24, borderRadius: 16, border: '1px solid #E5E7EB', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB', flexShrink: 0 }}>
-                    <ShieldCheck size={22} />
-                  </div>
-                  <div>
-                    <h4 style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 600, color: '#111827' }}>Guaranteed Best Rate</h4>
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#6B7280', lineHeight: 1.4 }}>Exclusive member pricing automatically applied to direct room bookings.</p>
-                  </div>
-                </div>
-
-                <div style={{ backgroundColor: 'white', padding: 24, borderRadius: 16, border: '1px solid #E5E7EB', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#059669', flexShrink: 0 }}>
-                    <Clock size={22} />
-                  </div>
-                  <div>
-                    <h4 style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 600, color: '#111827' }}>Early Check-in Priority</h4>
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#6B7280', lineHeight: 1.4 }}>Complimentary 1-hour early check-in or late checkout upon room availability.</p>
-                  </div>
-                </div>
-
-                <div style={{ backgroundColor: 'white', padding: 24, borderRadius: 16, border: '1px solid #E5E7EB', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D97706', flexShrink: 0 }}>
-                    <Gift size={22} />
-                  </div>
-                  <div>
-                    <h4 style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 600, color: '#111827' }}>Welcome Amenity</h4>
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#6B7280', lineHeight: 1.4 }}>Complimentary welcome mocktail and chef's artisan treat upon arrival.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'offers' && (
-            <div>
-              <div style={{ marginBottom: 28 }}>
-                <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#111827', marginBottom: 6, fontFamily: 'var(--font-serif)' }}>Exclusive Member Offers</h1>
-                <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>Special discounts, seasonal getaway vouchers, and promo codes for your next reservation.</p>
-              </div>
-
-              {offersEnabled === false ? (
-                <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 48, textAlign: 'center' }}>
-                  <Tag size={40} color="#9CA3AF" style={{ marginBottom: 12 }} />
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#111827', margin: '0 0 8px' }}>Seasonal Offers Currently Paused</h3>
-                  <p style={{ color: '#6B7280', fontSize: '0.95rem', margin: 0 }}>Please check back soon for our upcoming holiday promotions and weekend flash sales.</p>
-                </div>
-              ) : offers && offers.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>
-                  {offers.map(offer => (
-                    <div key={offer.id} style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 24, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-                      <div style={{ position: 'absolute', top: 16, right: 16, padding: '4px 10px', borderRadius: 20, backgroundColor: '#ECFDF5', color: '#065F46', fontSize: '0.75rem', fontWeight: 700 }}>
-                        {offer.status || 'Active'}
-                      </div>
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: '0 0 8px', paddingRight: 60 }}>{offer.title}</h3>
-                      <p style={{ color: '#4B5563', fontSize: '0.9rem', lineHeight: 1.5, margin: '0 0 20px', flex: 1 }}>{offer.description}</p>
-                      
-                      <div style={{ backgroundColor: '#F9FAFB', border: '1px dashed #D1D5DB', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                        <div>
-                          <div style={{ fontSize: '0.7rem', color: '#6B7280', textTransform: 'uppercase', fontWeight: 600 }}>Promo Code</div>
-                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)', letterSpacing: 1 }}>{offer.code}</div>
-                        </div>
-                        <button 
-                          onClick={() => {
-                            navigator.clipboard.writeText(offer.code);
-                            alert(`Promo code ${offer.code} copied!`);
-                          }}
-                          style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #D1D5DB', backgroundColor: 'white', color: '#374151', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
-                        >
-                          Copy
-                        </button>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: '#9CA3AF' }}>
-                        <span>Valid for {offer.expires || '30 days'}</span>
-                        <Link to="/hotels" style={{ color: '#2563EB', fontWeight: 600, textDecoration: 'none' }}>Book Now →</Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 48, textAlign: 'center' }}>
-                  <Tag size={40} color="#9CA3AF" style={{ marginBottom: 12 }} />
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#111827', margin: '0 0 8px' }}>No Active Offers Right Now</h3>
-                  <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>Check back soon for exclusive season discounts.</p>
-                </div>
-              )}
-            </div>
-          )}
 
           {activeTab === 'support' && (
             <div>
