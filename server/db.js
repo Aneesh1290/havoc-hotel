@@ -7,7 +7,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Support persistent disk via DATA_DIR environment variable
-let dataDir = process.env.DATA_DIR || __dirname;
+let rawDir = process.env.DATA_DIR;
+let dataDir;
+if (rawDir) {
+  // If user typed 'data' without leading slash on Linux/Render, convert to '/data'
+  if (process.platform !== 'win32' && (rawDir === 'data' || rawDir === '/data')) {
+    dataDir = '/data';
+  } else {
+    dataDir = path.resolve(rawDir);
+  }
+} else if (process.platform !== 'win32' && fs.existsSync('/data')) {
+  // Auto-detect Render persistent disk if mounted at /data
+  dataDir = '/data';
+} else {
+  dataDir = __dirname;
+}
+
 try {
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });

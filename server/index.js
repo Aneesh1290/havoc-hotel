@@ -26,17 +26,15 @@ app.get('/api/debug-storage', (req, res) => {
   });
 });
 
-// Ensure uploads directory exists
-let dataDir = process.env.DATA_DIR || process.cwd();
-let uploadsDir = path.join(dataDir, 'uploads');
+// Ensure uploads directory exists on persistent disk
+let uploadsDir = path.join(dbDataDir, 'uploads');
 try {
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 } catch (err) {
   console.warn(`Warning: Could not create uploadsDir "${uploadsDir}" (${err.message}). Falling back to local cwd.`);
-  dataDir = process.cwd();
-  uploadsDir = path.join(dataDir, 'uploads');
+  uploadsDir = path.join(process.cwd(), 'uploads');
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
