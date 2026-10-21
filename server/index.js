@@ -86,8 +86,10 @@ app.put('/api/admin/credentials', (req, res) => {
   }
 });
 
-// Serve uploaded files
+// Serve uploaded files (from persistent uploads directory, with fallback to public/uploads)
 app.use('/uploads', express.static(uploadsDir));
+app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
+app.use('/uploads', express.static(path.join(process.cwd(), 'dist', 'uploads')));
 
 // Configure multer
 const storage = multer.diskStorage({
@@ -119,9 +121,10 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 app.get('/api/properties', (req, res) => {
   try {
     const properties = db.prepare('SELECT * FROM properties').all();
-    // Parse JSON string back to array
+    // Parse JSON string back to array and normalize image URLs
     const parsedProperties = properties.map(p => ({
       ...p,
+      image: (p.image || '').replace(/https?:\/\/[^/]+\/uploads\//, '/uploads/'),
       amenities: JSON.parse(p.amenities)
     }));
     res.json(parsedProperties);

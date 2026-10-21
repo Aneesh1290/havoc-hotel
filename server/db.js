@@ -152,13 +152,13 @@ if (countProps.count === 0) {
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
   
-  // Real Sabharwal Hotels default setup instead of old generic beach/hill dummy hotels
+  // Real Sabharwal Hotels default setup with actual uploaded images and Bangalore location
   const defaultProperties = [
     {
       id: '1790867613159',
       name: 'Hotel Sabharwal Viceroy',
-      location: 'Karwar, Karnataka',
-      image: '/images/property_1.jpg',
+      location: 'Banglore',
+      image: '/uploads/1791187294071-972775816.png',
       roomsAvailable: 6,
       pricePerNight: 2500,
       amenities: JSON.stringify([{ name: 'AC & Non-AC Rooms', icon: 'BedDouble' }, { name: 'Restaurant', icon: 'Coffee' }, { name: 'Free WiFi', icon: 'Wifi' }, { name: 'Parking', icon: 'Car' }])
@@ -166,8 +166,8 @@ if (countProps.count === 0) {
     {
       id: '1790867785453',
       name: 'Hotel Sabharwal Inn',
-      location: 'Karwar, Karnataka',
-      image: '/images/property_2.jpg',
+      location: 'Banglore',
+      image: '/uploads/1791187302242-650095863.png',
       roomsAvailable: 10,
       pricePerNight: 2200,
       amenities: JSON.stringify([{ name: 'Central Location', icon: 'MapPin' }, { name: 'Free WiFi', icon: 'Wifi' }, { name: 'Room Service', icon: 'Coffee' }])
@@ -175,8 +175,8 @@ if (countProps.count === 0) {
     {
       id: '1790867813682',
       name: 'Hotel Sabharwal Residency',
-      location: 'Karwar, Karnataka',
-      image: '/images/property_3.jpg',
+      location: 'Banglore',
+      image: '/uploads/1791187311827-819784350.png',
       roomsAvailable: 15,
       pricePerNight: 2800,
       amenities: JSON.stringify([{ name: 'Deluxe Rooms', icon: 'BedDouble' }, { name: 'Restaurant', icon: 'Coffee' }, { name: 'Free WiFi', icon: 'Wifi' }, { name: 'Parking', icon: 'Car' }])
