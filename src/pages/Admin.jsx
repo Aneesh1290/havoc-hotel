@@ -1267,6 +1267,7 @@ function RoomsView({ properties, rooms, addRoomType, removeRoomType, updateRoomT
                 <label style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', fontWeight: 500 }}>Room Category</label>
                 <select value={roomForm.type} onChange={e => setRoomForm({...roomForm, type: e.target.value})} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB' }}>
                   <option>Standard</option>
+                  <option>Deluxe</option>
                   <option>Premium</option>
                   <option>Suite</option>
                   <option>Cottage</option>
