@@ -32,18 +32,18 @@ export default function Footer() {
               <li style={{ color: '#9CA3AF', fontSize: '0.9rem', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                 <MapPin size={18} style={{ flexShrink: 0, marginTop: 2, color: '#38BDF8' }} />
                 <span>
-                  <strong>Sabharwal Hospitality Pvt. Ltd.</strong><br/>
-                  123 Hospitality Avenue, Nariman Point,<br/>
-                  Mumbai, Maharashtra - 400021, India
+                  <strong>Hotel Sabharwal Hospitality</strong><br/>
+                  Bus station, Shantinagar Bus Stand KH Double Road 90 Kengal Hanumanthaiah Road Sudhama Nagar, Double Rd,<br/>
+                  opposite Shanthinagar, Bengaluru, Karnataka 560027
                 </span>
               </li>
               <li style={{ color: '#9CA3AF', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <Phone size={16} style={{ color: '#38BDF8' }} />
-                <a href="tel:+919876543210" style={{ color: '#9CA3AF', textDecoration: 'none' }}>+91 98765 43210</a>
+                <a href="tel:+919535545654" style={{ color: '#9CA3AF', textDecoration: 'none' }}>+91 95355 45654</a>
               </li>
               <li style={{ color: '#9CA3AF', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <Mail size={16} style={{ color: '#38BDF8' }} />
-                <a href="mailto:reservations@sabharwal.com" style={{ color: '#9CA3AF', textDecoration: 'none' }}>reservations@sabharwal.com</a>
+                <a href="mailto:support@hotelsabharwal.com" style={{ color: '#9CA3AF', textDecoration: 'none' }}>support@hotelsabharwal.com</a>
               </li>
             </ul>
 

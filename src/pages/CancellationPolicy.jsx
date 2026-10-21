@@ -112,7 +112,7 @@ export default function CancellationPolicy() {
               5. Refund Inquiries
             </h2>
             <p>
-              If you have cancelled a reservation and your refund has not reflected after 7 business days, please email our finance desk at <strong>reservations@sabharwal.com</strong> with your Booking ID and payment receipt.
+              If you have cancelled a reservation and your refund has not reflected after 7 business days, please email our finance desk at <strong>support@hotelsabharwal.com</strong> with your Booking ID and payment receipt.
             </p>
           </section>
 

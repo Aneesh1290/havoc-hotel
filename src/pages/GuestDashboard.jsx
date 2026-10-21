@@ -995,7 +995,7 @@ export default function GuestDashboard() {
                   </div>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#111827', margin: '0 0 6px' }}>24/7 Central Front Desk</h3>
                   <p style={{ color: '#6B7280', fontSize: '0.88rem', margin: '0 0 16px', lineHeight: 1.5 }}>Direct telephone line for reservations, early arrival inquiries, and immediate front office needs.</p>
-                  <a href="tel:+919876543210" style={{ display: 'inline-block', color: '#2563EB', fontWeight: 600, textDecoration: 'none', fontSize: '0.95rem' }}>+91 98765 43210</a>
+                  <a href="tel:+919535545654" style={{ display: 'inline-block', color: '#2563EB', fontWeight: 600, textDecoration: 'none', fontSize: '0.95rem' }}>+91 95355 45654</a>
                 </div>
 
                 <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 28 }}>
@@ -1004,7 +1004,7 @@ export default function GuestDashboard() {
                   </div>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#111827', margin: '0 0 6px' }}>Guest Concierge Email</h3>
                   <p style={{ color: '#6B7280', fontSize: '0.88rem', margin: '0 0 16px', lineHeight: 1.5 }}>Email for custom dining, romantic setups, airport chauffeur service, or conference bookings.</p>
-                  <a href="mailto:concierge@sabharwalhospitality.com" style={{ display: 'inline-block', color: '#059669', fontWeight: 600, textDecoration: 'none', fontSize: '0.95rem' }}>concierge@sabharwalhospitality.com</a>
+                  <a href="mailto:support@hotelsabharwal.com" style={{ display: 'inline-block', color: '#059669', fontWeight: 600, textDecoration: 'none', fontSize: '0.95rem' }}>support@hotelsabharwal.com</a>
                 </div>
               </div>
 

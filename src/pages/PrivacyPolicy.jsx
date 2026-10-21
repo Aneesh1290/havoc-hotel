@@ -106,10 +106,10 @@ export default function PrivacyPolicy() {
             </h2>
             <p>For any privacy inquiries, data deletion requests, or grievances, please contact our designated Privacy Office:</p>
             <div style={{ backgroundColor: '#F9FAFB', padding: 20, borderRadius: 12, border: '1px solid #E5E7EB', marginTop: 12 }}>
-              <p style={{ margin: '0 0 6px', fontWeight: 600, color: '#111827' }}>Sabharwal Hospitality Privacy & Grievance Cell</p>
-              <p style={{ margin: '0 0 4px', fontSize: '0.9rem', color: '#4B5563' }}>Email: privacy@sabharwalhospitality.com</p>
-              <p style={{ margin: '0 0 4px', fontSize: '0.9rem', color: '#4B5563' }}>Helpline: +91 98765 43210</p>
-              <p style={{ margin: 0, fontSize: '0.9rem', color: '#4B5563' }}>Address: 123 Hospitality Ave, Mumbai, India</p>
+              <p style={{ margin: '0 0 6px', fontWeight: 600, color: '#111827' }}>Hotel Sabharwal Hospitality Privacy & Grievance Cell</p>
+              <p style={{ margin: '0 0 4px', fontSize: '0.9rem', color: '#4B5563' }}>Email: support@hotelsabharwal.com</p>
+              <p style={{ margin: '0 0 4px', fontSize: '0.9rem', color: '#4B5563' }}>Helpline: +91 95355 45654</p>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#4B5563' }}>Address: Bus station, Shantinagar Bus Stand KH Double Road 90 Kengal Hanumanthaiah Road Sudhama Nagar, Double Rd, opposite Shanthinagar, Bengaluru, Karnataka 560027</p>
             </div>
           </section>
 
