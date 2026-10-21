@@ -5,7 +5,7 @@ import {
   CalendarDays, MapPin, User, LogOut, Heart, Award, ArrowRight, 
   BedDouble, Check, Eye, EyeOff, ChevronDown, Calendar, X, 
   Download, AlertTriangle, Clock, RefreshCw, MessageSquare, Info,
-  Sparkles, ShieldCheck, CreditCard, Compass, Gift, PhoneCall, Star, Tag, Bell
+  Sparkles, ShieldCheck, CreditCard, Compass, Gift, PhoneCall, Star, Tag, Bell, Home
 } from 'lucide-react';
 import { format, parseISO, differenceInDays, differenceInHours } from 'date-fns';
 
@@ -763,6 +763,28 @@ export default function GuestDashboard() {
           </Link>
         </div>
         <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Link 
+            to="/" 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 8, 
+              padding: '8px 16px', 
+              borderRadius: 8, 
+              border: '1px solid #D1D5DB', 
+              backgroundColor: '#F9FAFB', 
+              color: '#374151', 
+              textDecoration: 'none', 
+              fontSize: '0.9rem', 
+              fontWeight: 600,
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#EFF6FF'; e.currentTarget.style.borderColor = '#93C5FD'; e.currentTarget.style.color = '#1D4ED8'; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#F9FAFB'; e.currentTarget.style.borderColor = '#D1D5DB'; e.currentTarget.style.color = '#374151'; }}
+          >
+            <Home size={16} /> Home
+          </Link>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>
               {guestProfile.name.charAt(0)}
@@ -786,6 +808,27 @@ export default function GuestDashboard() {
             <div>
               <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 10, paddingLeft: 12 }}>Guest Portal</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <Link 
+                  to="/"
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 12, 
+                    padding: '12px 16px', 
+                    borderRadius: 12, 
+                    textDecoration: 'none',
+                    backgroundColor: 'transparent', 
+                    color: '#4B5563', 
+                    fontWeight: 500, 
+                    fontSize: '0.95rem',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#EFF6FF'; e.currentTarget.style.color = '#1D4ED8'; }}
+                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#4B5563'; }}
+                >
+                  <Home size={18} color="#6B7280" /> Back to Home
+                </Link>
+
                 <button 
                   onClick={() => setActiveTab('bookings')}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 12, border: 'none', backgroundColor: activeTab === 'bookings' ? '#EFF6FF' : 'transparent', color: activeTab === 'bookings' ? '#1D4ED8' : '#4B5563', fontWeight: activeTab === 'bookings' ? 600 : 500, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', fontSize: '0.95rem' }}
