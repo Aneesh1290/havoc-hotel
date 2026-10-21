@@ -18,6 +18,7 @@ try {
 }
 const dbPath = path.join(dataDir, 'database.sqlite');
 console.log(`[Database] SQLite database location: ${dbPath}`);
+export { dbPath, dataDir };
 const db = new Database(dbPath);
 
 // Initialize Schema

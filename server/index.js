@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import db from './db.js';
+import db, { dbPath, dataDir as dbDataDir } from './db.js';
 import { sendBookingConfirmationEmail, getMailTransporter } from './emailService.js';
 
 const JWT_SECRET = 'sabharwal_super_secret_key_2026'; // In production, use env var
@@ -13,6 +13,18 @@ const JWT_SECRET = 'sabharwal_super_secret_key_2026'; // In production, use env 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Diagnostic endpoint to check persistent disk status
+app.get('/api/debug-storage', (req, res) => {
+  res.json({
+    envDATA_DIR: process.env.DATA_DIR || null,
+    dbPath,
+    dbDataDir,
+    uploadsDir,
+    dbExists: fs.existsSync(dbPath),
+    uploadsExists: fs.existsSync(uploadsDir)
+  });
+});
 
 // Ensure uploads directory exists
 let dataDir = process.env.DATA_DIR || process.cwd();
