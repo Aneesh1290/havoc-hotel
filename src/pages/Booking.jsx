@@ -392,13 +392,11 @@ export default function Booking() {
               return (
                 <div key={room.id} className="booking-room-card" style={{ display: 'flex', border: isSelected ? '1px solid var(--primary)' : '1px solid #E5E7EB', borderRadius: 12, overflow: 'hidden', backgroundColor: 'white', transition: 'all 0.2s', boxShadow: isSelected ? '0 0 0 2px var(--primary)' : 'none', opacity: isSoldOut ? 0.6 : 1 }}>
                   {/* Room Image */}
-                  <div className="booking-room-image" style={{ width: 220, backgroundColor: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', overflow: 'hidden' }}>
-                    {room.images && room.images.length > 0 ? (
+                  {room.images && room.images.length > 0 && (
+                    <div className="booking-room-image" style={{ width: 220, backgroundColor: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', overflow: 'hidden' }}>
                       <img src={`${room.images[0]}`} alt={room.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <img src="/images/property_1.jpg" alt={room.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    )}
-                  </div>
+                    </div>
+                  )}
                   
                   {/* Room Details */}
                   <div className="booking-room-content" style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column' }}>

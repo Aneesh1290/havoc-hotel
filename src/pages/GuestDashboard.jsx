@@ -851,7 +851,9 @@ export default function GuestDashboard() {
                     const isCancelled = b.status === 'Cancelled';
                     return (
                     <div key={b.id} className="booking-card" style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden', display: 'flex', opacity: isCancelled ? 0.75 : 1 }}>
-                      <div className="booking-card-image" style={{ width: 220, backgroundImage: `url(${property?.image || '/images/property_1.jpg'})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
+                      {property?.image && (
+                        <div className="booking-card-image" style={{ width: 220, backgroundImage: `url(${property.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
+                      )}
                       <div className="booking-card-content" style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                           <div>

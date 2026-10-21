@@ -643,7 +643,7 @@ function PropertiesView({ properties, addProperty, removeProperty, updatePropert
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [formData, setFormData] = useState({
-    id: '', name: '', location: '', image: '/images/property_1.jpg', pricePerNight: 0,
+    id: '', name: '', location: '', image: '', pricePerNight: 0,
     amenities: [{ name: 'Free WiFi', icon: 'Wifi' }]
   });
   const [customAmenity, setCustomAmenity] = useState('');
@@ -739,7 +739,7 @@ function PropertiesView({ properties, addProperty, removeProperty, updatePropert
 
   const handleOpenAdd = () => {
     setIsEditing(false);
-    setFormData({ id: '', name: '', location: '', image: '/images/property_1.jpg', pricePerNight: 5000, amenities: [{ name: 'Free WiFi', icon: 'Wifi' }] });
+    setFormData({ id: '', name: '', location: '', image: '', pricePerNight: 5000, amenities: [{ name: 'Free WiFi', icon: 'Wifi' }] });
     setShowModal(true);
   };
 

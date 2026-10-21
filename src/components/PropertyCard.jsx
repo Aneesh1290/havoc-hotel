@@ -18,8 +18,12 @@ export default function PropertyCard({ property, onSelect }) {
 
   return (
     <div className="property-card">
-      <div className="card-image-wrapper">
-        <img src={property.image || property.images?.[0] || '/images/property_1.jpg'} alt={property.name} className="card-image" />
+      <div className="card-image-wrapper" style={{ backgroundColor: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {(property.image || property.images?.[0]) ? (
+          <img src={property.image || property.images?.[0]} alt={property.name} className="card-image" />
+        ) : (
+          <div style={{ color: '#9CA3AF', fontSize: '0.9rem', fontWeight: 500 }}>No Image</div>
+        )}
         <button className="card-arrow-btn" aria-label="View property">
           <ArrowRight size={18} />
         </button>
