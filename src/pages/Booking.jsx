@@ -73,6 +73,7 @@ export default function Booking() {
 
   // Final form state
   const [showFinalForm, setShowFinalForm] = useState(false);
+  const [confirmedBookingData, setConfirmedBookingData] = useState(null);
   const [formData, setFormData] = useState(() => {
     try {
       const saved = localStorage.getItem('guestProfile');
@@ -273,9 +274,11 @@ export default function Booking() {
     e.preventDefault();
     if (!formData.name || !formData.email) return;
 
+    const summaryRooms = [];
     Object.entries(selectedRooms).forEach(([roomId, count]) => {
       if (count > 0) {
         const room = propertyRooms.find(r => r.id === roomId);
+        summaryRooms.push({ name: room.name, count, price: room.pricePerNight });
         addBooking({
           name: formData.name,
           email: formData.email,
@@ -295,8 +298,19 @@ export default function Booking() {
       }
     });
 
-    alert("Booking confirmed successfully! Redirecting to your guest panel.");
-    navigate('/guest');
+    setShowFinalForm(false);
+    setConfirmedBookingData({
+      bookingId: 'SBH-' + Math.floor(100000 + Math.random() * 900000),
+      guestName: formData.name,
+      guestEmail: formData.email,
+      hotelName: property.name,
+      hotelLocation: property.location,
+      checkIn,
+      checkOut,
+      nights,
+      rooms: summaryRooms,
+      totalAmount: totalPrice
+    });
   };
 
   return (
@@ -841,6 +855,105 @@ export default function Booking() {
                 <CheckCircle size={20} /> Confirm & Pay — ₹{totalPrice.toLocaleString()}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Luxury Booking Confirmation Modal */}
+      {confirmedBookingData && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.8)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ backgroundColor: 'white', width: '100%', maxWidth: 520, borderRadius: 20, overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)', animation: 'scaleUp 0.25s ease-out' }}>
+            
+            {/* Top Success Banner */}
+            <div style={{ backgroundColor: '#0A192F', color: 'white', padding: '32px 24px', textAlign: 'center', position: 'relative' }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', backgroundColor: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 8px 16px rgba(16, 185, 129, 0.3)' }}>
+                <CheckCircle size={36} color="white" />
+              </div>
+              <h2 style={{ fontSize: '1.6rem', fontWeight: 700, margin: '0 0 6px', fontFamily: 'Playfair Display, serif', letterSpacing: '0.02em' }}>Reservation Confirmed</h2>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#94A3B8' }}>
+                Confirmation sent to <strong style={{ color: '#F1F5F9' }}>{confirmedBookingData.guestEmail}</strong>
+              </p>
+            </div>
+
+            {/* Summary Details */}
+            <div style={{ padding: 28 }}>
+              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: 18, marginBottom: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: 12, marginBottom: 12 }}>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 600, letterSpacing: '0.05em' }}>Booking Reference</span>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0F172A', marginTop: 2 }}>{confirmedBookingData.bookingId}</div>
+                  </div>
+                  <span style={{ backgroundColor: '#ECFDF5', color: '#059669', fontSize: '0.8rem', fontWeight: 700, padding: '4px 10px', borderRadius: 20, border: '1px solid #A7F3D0' }}>
+                    Guaranteed
+                  </span>
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '1.05rem', marginBottom: 2 }}>{confirmedBookingData.hotelName}</div>
+                  <div style={{ fontSize: '0.85rem', color: '#64748B' }}>{confirmedBookingData.hotelLocation}</div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, borderTop: '1px solid #E2E8F0', paddingTop: 12, marginBottom: 12 }}>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500, display: 'block' }}>Check-in</span>
+                    <strong style={{ fontSize: '0.9rem', color: '#1E293B' }}>{format(confirmedBookingData.checkIn, 'EEE, dd MMM yyyy')}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500, display: 'block' }}>Check-out</span>
+                    <strong style={{ fontSize: '0.9rem', color: '#1E293B' }}>{format(confirmedBookingData.checkOut, 'EEE, dd MMM yyyy')}</strong>
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>
+                    Total ({confirmedBookingData.nights} Night{confirmedBookingData.nights > 1 ? 's' : ''}, Taxes incl.)
+                  </span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0A192F' }}>
+                    ₹{confirmedBookingData.totalAmount.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => navigate('/guest')}
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    borderRadius: 10,
+                    backgroundColor: 'var(--primary)',
+                    color: 'white',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '0.95rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(10, 25, 47, 0.25)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Go to Guest Panel →
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/')}
+                  style={{
+                    padding: '14px 20px',
+                    borderRadius: 10,
+                    backgroundColor: '#F1F5F9',
+                    color: '#334155',
+                    border: '1px solid #CBD5E1',
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Home
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
