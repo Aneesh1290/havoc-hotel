@@ -6,6 +6,7 @@ import fs from 'fs';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import db from './db.js';
+import { sendBookingConfirmationEmail, getMailTransporter } from './emailService.js';
 
 const JWT_SECRET = 'sabharwal_super_secret_key_2026'; // In production, use env var
 
@@ -234,7 +235,7 @@ app.get('/api/bookings', (req, res) => {
   }
 });
 
-app.post('/api/bookings', (req, res) => {
+app.post('/api/bookings', async (req, res) => {
   const { name, email, phone, hotelId, hotelName, checkIn, checkOut, amount, status, rooms, roomId, adults, children, notes } = req.body;
   try {
     const stmt = db.prepare(`
@@ -257,7 +258,69 @@ app.post('/api/bookings', (req, res) => {
       children || 0,
       notes || ''
     );
-    res.json({ success: true, id: info.lastInsertRowid });
+
+    const bookingId = info.lastInsertRowid;
+
+    // Send confirmation email asynchronously (won't block or fail response if SMTP is down)
+    if (email) {
+      sendBookingConfirmationEmail({
+        id: bookingId,
+        name,
+        email,
+        phone,
+        hotelId,
+        hotelName,
+        checkIn,
+        checkOut,
+        amount,
+        status: status || 'Confirmed',
+        rooms: rooms || 1,
+        adults: adults || 1,
+        children: children || 0,
+        notes: notes || ''
+      }).catch(err => {
+        console.error('[EmailService] Async email sending error:', err);
+      });
+    }
+
+    res.json({ success: true, id: bookingId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Test Email endpoint to verify SMTP credentials from Admin panel
+app.post('/api/email/test', async (req, res) => {
+  const { testEmail } = req.body;
+  const targetEmail = testEmail || req.body.email;
+  if (!targetEmail) {
+    return res.status(400).json({ error: 'Recipient email address is required.' });
+  }
+
+  const mailConfig = getMailTransporter();
+  if (!mailConfig) {
+    return res.status(400).json({ 
+      error: 'SMTP credentials not configured. Please save your Gmail address and 16-character App Password first.' 
+    });
+  }
+
+  try {
+    const { transporter, fromEmail, senderName } = mailConfig;
+    const info = await transporter.sendMail({
+      from: `"${senderName}" <${fromEmail}>`,
+      to: targetEmail,
+      subject: 'Test Email - Hotel Sabharwal Booking System',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 24px; color: #111827;">
+          <h2 style="color: #0A192F;">SMTP Test Successful!</h2>
+          <p>Your Gmail / SMTP email service is configured correctly for <strong>Hotel Sabharwal Hospitality</strong>.</p>
+          <p>Automated booking confirmation emails will now be delivered to guests seamlessly when reservations are confirmed.</p>
+        </div>
+      `,
+      text: 'SMTP Test Successful! Your email service is configured correctly for Hotel Sabharwal Hospitality.'
+    });
+
+    res.json({ success: true, message: `Test email successfully sent to ${targetEmail}`, messageId: info.messageId });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

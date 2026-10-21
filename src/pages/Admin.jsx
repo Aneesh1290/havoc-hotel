@@ -6,7 +6,7 @@ import {
   Archive, Users, CreditCard, FileText, Tag, Image as ImageIcon, 
   Settings, Search, Bell, Plus, Headset, CalendarCheck, Wallet, 
   PieChart, Users as UsersIcon, ArrowRight, MapPin, Edit2, Trash2, Check, X, MoreVertical,
-  Clock, CheckCircle
+  Clock, CheckCircle, Mail, Send
 } from 'lucide-react';
 import { format, isSameDay, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
 
@@ -1745,9 +1745,218 @@ function SettingsView() {
           </button>
         </div>
 
+        <EmailNotificationSettings />
+
         <AdminCredentialsForm />
       </div>
     </>
+  );
+}
+
+function EmailNotificationSettings() {
+  const [smtpConfig, setSmtpConfig] = useState({
+    smtpUser: '',
+    smtpPass: '',
+    smtpFromName: 'Hotel Sabharwal Hospitality',
+    smtpHost: 'smtp.gmail.com',
+    smtpPort: '465'
+  });
+  const [saved, setSaved] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [testStatus, setTestStatus] = useState({ loading: false, msg: '', type: '' });
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => {
+        if (data) {
+          setSmtpConfig(prev => ({
+            smtpUser: data.smtpUser || '',
+            smtpPass: data.smtpPass || '',
+            smtpFromName: data.smtpFromName || 'Hotel Sabharwal Hospitality',
+            smtpHost: data.smtpHost || 'smtp.gmail.com',
+            smtpPort: data.smtpPort || '465'
+          }));
+        }
+      })
+      .catch(err => console.error("Failed to load email settings:", err));
+  }, []);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    try {
+      await Promise.all([
+        fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'smtpUser', value: smtpConfig.smtpUser })
+        }),
+        fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'smtpPass', value: smtpConfig.smtpPass })
+        }),
+        fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'smtpFromName', value: smtpConfig.smtpFromName })
+        }),
+        fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'smtpHost', value: smtpConfig.smtpHost })
+        }),
+        fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'smtpPort', value: smtpConfig.smtpPort })
+        })
+      ]);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      alert("Failed to save email settings");
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmail) {
+      return alert("Please enter an email address to send the test confirmation to.");
+    }
+    setTestStatus({ loading: true, msg: 'Sending test email...', type: 'info' });
+    try {
+      const res = await fetch('/api/email/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testEmail })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTestStatus({ loading: false, msg: data.message, type: 'success' });
+      } else {
+        setTestStatus({ loading: false, msg: data.error || 'Failed to send test email.', type: 'error' });
+      }
+    } catch (err) {
+      setTestStatus({ loading: false, msg: 'Error connecting to email service.', type: 'error' });
+    }
+  };
+
+  return (
+    <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#111827', margin: 0 }}>Guest Booking Email Confirmation</h3>
+          <p style={{ color: '#6B7280', fontSize: '0.85rem', marginTop: 4 }}>Automatically dispatch booking confirmations to guests upon reservation.</p>
+        </div>
+        <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10B981' }}>
+          <Mail size={20} />
+        </div>
+      </div>
+
+      {saved && (
+        <div style={{ padding: '10px 14px', borderRadius: 8, backgroundColor: '#ECFDF5', color: '#065F46', marginBottom: 20, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CheckCircle size={16} /> Email settings saved successfully!
+        </div>
+      )}
+
+      <form onSubmit={handleSave}>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+            Sender Display Name
+          </label>
+          <input 
+            type="text" 
+            value={smtpConfig.smtpFromName} 
+            onChange={e => setSmtpConfig(prev => ({ ...prev, smtpFromName: e.target.value }))}
+            placeholder="Hotel Sabharwal Hospitality" 
+            style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB' }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+            Gmail / Sender Email Address
+          </label>
+          <input 
+            type="email" 
+            value={smtpConfig.smtpUser} 
+            onChange={e => setSmtpConfig(prev => ({ ...prev, smtpUser: e.target.value }))}
+            placeholder="yourhotel@gmail.com" 
+            style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB' }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+            Gmail 16-Character App Password
+          </label>
+          <input 
+            type="password" 
+            value={smtpConfig.smtpPass} 
+            onChange={e => setSmtpConfig(prev => ({ ...prev, smtpPass: e.target.value }))}
+            placeholder="xxxx xxxx xxxx xxxx" 
+            style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB' }}
+          />
+          <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#6B7280' }}>
+            Tip: Generate via Google Account → Security → 2-Step Verification → App Passwords.
+          </p>
+        </div>
+
+        <button 
+          type="submit" 
+          style={{ backgroundColor: '#0A192F', color: 'white', padding: '10px 24px', border: 'none', borderRadius: 8, fontWeight: 500, cursor: 'pointer', marginBottom: 24 }}
+        >
+          Save Email Configuration
+        </button>
+      </form>
+
+      {/* Test Email Section */}
+      <div style={{ paddingTop: 20, borderTop: '1px solid #E5E7EB' }}>
+        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+          Send Test Email
+        </label>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <input 
+            type="email" 
+            value={testEmail} 
+            onChange={e => setTestEmail(e.target.value)} 
+            placeholder="Enter your email to test" 
+            style={{ flex: 1, padding: '9px 12px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.9rem' }}
+          />
+          <button 
+            type="button" 
+            onClick={handleSendTestEmail} 
+            disabled={testStatus.loading}
+            style={{ 
+              backgroundColor: '#10B981', 
+              color: 'white', 
+              padding: '9px 16px', 
+              border: 'none', 
+              borderRadius: 8, 
+              fontWeight: 500, 
+              cursor: testStatus.loading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            <Send size={15} /> {testStatus.loading ? 'Sending...' : 'Test Send'}
+          </button>
+        </div>
+        {testStatus.msg && (
+          <div style={{ 
+            marginTop: 10, 
+            padding: '8px 12px', 
+            borderRadius: 6, 
+            fontSize: '0.82rem',
+            backgroundColor: testStatus.type === 'success' ? '#ECFDF5' : testStatus.type === 'error' ? '#FEE2E2' : '#EFF6FF',
+            color: testStatus.type === 'success' ? '#065F46' : testStatus.type === 'error' ? '#991B1B' : '#1E40AF'
+          }}>
+            {testStatus.msg}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
