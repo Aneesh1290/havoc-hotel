@@ -54,6 +54,9 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-serif);
   font-weight: 500;
+  font-variant-numeric: lining-nums proportional-nums;
+  -webkit-font-feature-settings: "lnum" 1, "pnum" 1;
+  font-feature-settings: "lnum" 1, "pnum" 1;
 }
 
 a {

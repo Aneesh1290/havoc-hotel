@@ -430,7 +430,7 @@ export default function Booking() {
                           )}
                         </div>
                       )}
-                      <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#111827', margin: '0 0 8px 0', fontFamily: 'Playfair Display, serif' }}>{room.name}</h3>
+                      <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#111827', margin: '0 0 8px 0', fontFamily: 'var(--font-sans)', fontVariantNumeric: 'lining-nums proportional-nums' }}>{room.name}</h3>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#4B5563', fontSize: '0.9rem' }}>
                         <Users size={16} /> {room.capacity} Guests max
                         <span style={{ margin: '0 8px', color: '#D1D5DB' }}>|</span>
