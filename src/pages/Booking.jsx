@@ -395,25 +395,31 @@ export default function Booking() {
       <div style={{ minHeight: '100vh', backgroundColor: '#F7F4EE', color: '#102641', fontFamily: "'Outfit', sans-serif" }}>
         {/* Top Header matching website theme */}
         <header style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, zIndex: 40, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <div style={{ maxWidth: 1240, margin: '0 auto', padding: '14px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ maxWidth: 1240, margin: '0 auto', padding: '12px 24px', display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center' }}>
+            
+            {/* Left: Brand & Hotel */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <img src="/logo_dark.png" alt="Sabharwal Hospitality" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
-              <div style={{ width: 1, height: 26, backgroundColor: '#E5E7EB' }} className="hide-on-mobile" />
+              <img src="/logo_dark.png" alt="Sabharwal Hospitality" style={{ height: 42, width: 'auto', objectFit: 'contain', display: 'block' }} />
+              <div style={{ width: 1, height: 28, backgroundColor: '#E5E7EB' }} className="hide-on-mobile" />
               <div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#102641', fontFamily: "'Playfair Display', serif", lineHeight: 1.2 }}>
+                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#102641', fontFamily: "'Playfair Display', serif", lineHeight: 1.25, margin: 0 }}>
                   {property.name}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>
+                <div style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: 2 }}>
                   A Unit of Sabharwal Hospitality Group
                 </div>
               </div>
             </div>
 
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, letterSpacing: '0.22em', color: '#102641', textTransform: 'uppercase' }} className="hide-on-mobile">
-              CHECKOUT
+            {/* Center: Title */}
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '0.95rem', fontWeight: 800, letterSpacing: '0.25em', color: '#102641', textTransform: 'uppercase' }} className="hide-on-mobile">
+                CHECKOUT
+              </span>
             </div>
 
-            <div>
+            {/* Right: Back to Rooms */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
               <button
                 type="button"
                 onClick={() => setCheckoutStep('select_rooms')}
@@ -421,13 +427,14 @@ export default function Booking() {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: 8,
                   color: '#4B5563',
                   fontSize: '0.9rem',
                   fontWeight: 600,
-                  transition: 'color 0.2s'
+                  transition: 'color 0.2s',
+                  padding: '6px 0'
                 }}
                 onMouseEnter={e => e.currentTarget.style.color = '#102641'}
                 onMouseLeave={e => e.currentTarget.style.color = '#4B5563'}
@@ -435,6 +442,7 @@ export default function Booking() {
                 <ArrowLeft size={16} /> Back to Rooms
               </button>
             </div>
+
           </div>
         </header>
 
