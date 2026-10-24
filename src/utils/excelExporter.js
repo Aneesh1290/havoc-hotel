@@ -317,10 +317,14 @@ export async function exportCorporateHotelExcel({ bookings = [], properties = []
   // Generate buffer and trigger browser download
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  const hotelTag = filterHotel === 'all' ? 'All_Hotels' : filterHotel.replace(/\s+/g, '_');
+  let hotelNameResolved = filterHotel;
+  if (filterHotel !== 'all') {
+    const matchedProp = properties.find(p => p.id === filterHotel || p.name === filterHotel);
+    if (matchedProp) {
+      hotelNameResolved = matchedProp.name;
+    }
+  }
+  const hotelTag = hotelNameResolved === 'all' ? 'All_Hotels' : hotelNameResolved.replace(/[^a-zA-Z0-9_-]/g, '_');
   a.download = `Sabharwal_Hospitality_Report_${hotelTag}_${format(new Date(), 'dd-MMM-yyyy_HHmm')}.xlsx`;
   document.body.appendChild(a);
   a.click();

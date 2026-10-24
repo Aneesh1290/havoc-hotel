@@ -198,7 +198,7 @@ export default function Admin() {
         <div style={{ padding: '0 40px 40px' }}>
           {activeTab === 'dashboard' && <DashboardView setActiveTab={setActiveTab} properties={properties} bookings={bookings} inventoryAlerts={inventoryAlerts} rooms={rooms} adminProfile={adminProfile} />}
           {activeTab === 'guests' && <GuestsView />}
-          {activeTab === 'properties' && <PropertiesView properties={properties} addProperty={addProperty} removeProperty={removeProperty} updateProperty={updateProperty} rooms={rooms} />}
+          {activeTab === 'properties' && <PropertiesView properties={properties} bookings={bookings} addProperty={addProperty} removeProperty={removeProperty} updateProperty={updateProperty} rooms={rooms} />}
           {activeTab === 'bookings' && <BookingsView bookings={bookings} properties={properties} rooms={rooms} removeBooking={removeBooking} searchQuery={searchQuery} />}
           {activeTab === 'rooms' && <RoomsView properties={properties} rooms={rooms} addRoomType={addRoomType} removeRoomType={removeRoomType} updateRoomType={updateRoomType} />}
           {activeTab === 'payments' && <PaymentsView bookings={bookings} />}
@@ -397,23 +397,84 @@ function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, ro
           const col = colors[i % 4];
 
           return (
-            <div key={p.id} style={{ flex: 1, backgroundColor: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-              <div style={{ height: 140, backgroundImage: `url(${p.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
-              <div style={{ padding: '20px 20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                  <div>
-                    <h4 style={{ margin: '0 0 6px', fontSize: '1.05rem', color: '#111827', fontWeight: 600 }}>{p.name}</h4>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#6B7280', fontSize: '0.8rem' }}>
-                      <MapPin size={12} /> {p.location}
+            <div key={p.id} style={{ flex: 1, backgroundColor: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ height: 140, backgroundImage: `url(${p.image})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+                <button
+                  onClick={() => exportCorporateHotelExcel({ bookings, properties, rooms, filterHotel: p.id, filterDate: 'all' })}
+                  title={`Export Excel report for ${p.name}`}
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(4px)',
+                    color: '#059669',
+                    border: '1px solid rgba(5, 150, 105, 0.2)',
+                    borderRadius: 8,
+                    padding: '6px 10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = '#059669';
+                    e.currentTarget.style.color = '#FFFFFF';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                    e.currentTarget.style.color = '#059669';
+                  }}
+                >
+                  <FileSpreadsheet size={14} /> Export Report
+                </button>
+              </div>
+              <div style={{ padding: '18px 20px 20px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <div>
+                      <h4 style={{ margin: '0 0 6px', fontSize: '1.05rem', color: '#111827', fontWeight: 600 }}>{p.name}</h4>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#6B7280', fontSize: '0.8rem' }}>
+                        <MapPin size={12} /> {p.location}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>{pOccRate}%</div>
+                      <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>Occupancy</div>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>{pOccRate}%</div>
-                    <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>Occupancy</div>
+                  <div style={{ width: '100%', height: 6, backgroundColor: '#F3F4F6', borderRadius: 3, overflow: 'hidden', marginBottom: 14 }}>
+                    <div style={{ width: `${pOccRate}%`, height: '100%', backgroundColor: col, borderRadius: 3 }}></div>
                   </div>
                 </div>
-                <div style={{ width: '100%', height: 6, backgroundColor: '#F3F4F6', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ width: `${pOccRate}%`, height: '100%', backgroundColor: col, borderRadius: 3 }}></div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1px solid #F3F4F6' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#6B7280' }}>
+                    {pBookings.length} booking{pBookings.length !== 1 ? 's' : ''} today
+                  </span>
+                  <button
+                    onClick={() => exportCorporateHotelExcel({ bookings, properties, rooms, filterHotel: p.id, filterDate: 'all' })}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#059669',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                    onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+                  >
+                    <Download size={13} /> Export Excel
+                  </button>
                 </div>
               </div>
             </div>
@@ -662,7 +723,7 @@ function GuestsView() {
   );
 }
 
-function PropertiesView({ properties, addProperty, removeProperty, updateProperty, rooms }) {
+function PropertiesView({ properties, bookings = [], addProperty, removeProperty, updateProperty, rooms }) {
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -831,9 +892,32 @@ function PropertiesView({ properties, addProperty, removeProperty, updatePropert
                   <td style={{ ...tdStyle, color: '#4B5563' }}>{propRooms.length} Types</td>
                   <td style={{ ...tdStyle, color: '#111827', fontWeight: 600 }}>{totalInventory} Rooms</td>
                   <td style={{ ...tdStyle, textAlign: 'right' }}>
-                    <button onClick={() => handleOpenEdit(p)} style={{ color: '#3B82F6', background: 'none', border: 'none', padding: 8, cursor: 'pointer' }}><Edit2 size={16} /></button>
+                    <button 
+                      onClick={() => exportCorporateHotelExcel({ bookings, properties, rooms, filterHotel: p.id, filterDate: 'all' })}
+                      title={`Export Excel report for ${p.name}`}
+                      style={{ 
+                        color: '#059669', 
+                        backgroundColor: '#ECFDF5', 
+                        border: '1px solid #A7F3D0', 
+                        padding: '6px 12px', 
+                        borderRadius: 6, 
+                        cursor: 'pointer', 
+                        marginRight: 8,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        fontSize: '0.8rem',
+                        fontWeight: 600
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#D1FAE5'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = '#ECFDF5'}
+                    >
+                      <FileSpreadsheet size={15} /> Export Report
+                    </button>
+                    <button onClick={() => handleOpenEdit(p)} title="Edit property" style={{ color: '#3B82F6', background: 'none', border: 'none', padding: 8, cursor: 'pointer' }}><Edit2 size={16} /></button>
                     <button 
                       onClick={() => { if (window.confirm('Delete this property?')) removeProperty(p.id); }}
+                      title="Delete property"
                       style={{ color: '#EF4444', background: 'none', border: 'none', padding: 8, cursor: 'pointer' }}
                     >
                       <Trash2 size={16} />
