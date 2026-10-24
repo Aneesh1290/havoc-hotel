@@ -1085,19 +1085,60 @@ button {
     line-height: 1.2 !important;
   }
 
-  .checkout-main-grid {
-    grid-template-columns: 1fr !important;
-    gap: 24px !important;
-    padding: 20px 14px 60px !important;
+  .checkout-header-container {
+    padding: 10px 14px !important;
+    gap: 8px !important;
   }
 
+  .checkout-header-left {
+    gap: 8px !important;
+    min-width: 0 !important;
+  }
+
+  .checkout-header-left img {
+    height: 32px !important;
+  }
+
+  .checkout-header-left > div > div:first-child {
+    font-size: 0.92rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 170px !important;
+  }
+
+  .checkout-header-right {
+    flex-shrink: 0 !important;
+  }
+
+  .checkout-header-right button {
+    font-size: 0.82rem !important;
+    padding: 6px 4px !important;
+    gap: 4px !important;
+  }
+
+  .checkout-main-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
+    padding: 16px 12px 60px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Keep Order Summary visually first or clean on mobile, while form stays accessible */
   .checkout-card {
     padding: 20px 16px !important;
+    border-radius: 12px !important;
+    margin-bottom: 20px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .checkout-sticky-summary {
     position: static !important;
     top: auto !important;
+    margin-bottom: 0 !important;
   }
 }
 
