@@ -29,7 +29,7 @@ function buildReservationsSheet(worksheet, sheetTitle, bookingList, overallStart
   worksheet.columns = [
     { key: 'totalSl', width: 12 },   // Col A: TOTAL SL
     { key: 'sn', width: 8 },         // Col B: SN
-    { key: 'orderNo', width: 20 },    // Col C: ORDER NO
+    { key: 'orderNo', width: 22 },    // Col C: ORDER NO (#PAYDUE_...)
     { key: 'name', width: 26 },       // Col D: NAME
     { key: 'phone', width: 18 },      // Col E: PHONE NO
     { key: 'email', width: 30 },      // Col F: E-MAIL ID
@@ -128,8 +128,18 @@ function buildReservationsSheet(worksheet, sheetTitle, bookingList, overallStart
       groupAmountTotal += amt;
 
       const stayTime = b.stayDuration || (b.roomName?.toLowerCase().includes('12') ? '12 Hours' : '24 Hours');
-      // Format Order No cleanly: e.g. SBH-1001 or SH-1001 based on ID
-      const orderCode = b.id ? (b.id.toString().startsWith('SBH') ? b.id : `SBH-${b.id.toString().padStart(4, '0')}`) : 'SBH-0001';
+      
+      // Order Code: exact format as reference: #PAYDUE_SP_01 or #PAYDUE_FZ_...
+      let idStr = b.id ? b.id.toString() : sn.toString();
+      let orderCode;
+      if (idStr.startsWith('#PAYDUE') || idStr.startsWith('PAYDUE')) {
+        orderCode = idStr.startsWith('#') ? idStr : `#${idStr}`;
+      } else {
+        // Zero pad single digit: 1 -> 01, 2 -> 02, etc.
+        const numPart = idStr.replace(/\D/g, '') || sn.toString();
+        const padded = numPart.length === 1 ? `0${numPart}` : numPart;
+        orderCode = `#PAYDUE_SP_${padded}`;
+      }
 
       const dataRow = worksheet.addRow([
         runningTotalSl,
@@ -188,11 +198,12 @@ function buildReservationsSheet(worksheet, sheetTitle, bookingList, overallStart
 }
 
 /**
- * Exports hotel reservations into configured multi-sheet corporate workbook:
- * 1. "All Bookings": Complete reservation history grouped by date
- * 2. "Yesterday": Orders / Stays from the previous day
- * 3. "Today": Orders / Stays for today's date
- * 4. "Future Dates": Separate sheet for all upcoming bookings (or by upcoming dates)
+ * Exports hotel reservations into the exact tab layout requested:
+ * Tabs:
+ * - "All Bookings"
+ * - "Oct 23" (Yesterday)
+ * - "Oct 24" (Today)
+ * - "Oct 25", "Oct 26", ... (Future booking dates)
  */
 export async function exportCorporateHotelExcel({ bookings = [], properties = [], rooms = [], filterHotel = 'all' }) {
   const workbook = new ExcelJS.Workbook();
@@ -221,90 +232,67 @@ export async function exportCorporateHotelExcel({ bookings = [], properties = []
   const todayStart = startOfDay(now);
   const yesterdayStart = subDays(todayStart, 1);
 
-  // Group into cohorts: Yesterday, Today, Future, and All
-  const yesterdayBookings = [];
-  const todayBookings = [];
-  const futureBookings = [];
+  const yesterdayTabName = format(yesterdayStart, 'MMM d'); // e.g. "Oct 23"
+  const todayTabName = format(todayStart, 'MMM d');         // e.g. "Oct 24"
 
+  // 1. Collect all distinct booking dates represented
+  const bookingsByDate = {};
   sortedBookings.forEach(b => {
-    if (!b.checkIn) {
-      futureBookings.push(b);
-      return;
-    }
-    const checkInDate = startOfDay(parseISO(b.checkIn));
-    
-    // Also consider creation/booked date if present
-    const bookedAtDate = b.createdAt ? startOfDay(parseISO(b.createdAt)) : null;
-
-    if (isSameDay(checkInDate, yesterdayStart) || (bookedAtDate && isSameDay(bookedAtDate, yesterdayStart))) {
-      yesterdayBookings.push(b);
-    } else if (isSameDay(checkInDate, todayStart) || (bookedAtDate && isSameDay(bookedAtDate, todayStart))) {
-      todayBookings.push(b);
-    } else if (checkInDate > todayStart) {
-      futureBookings.push(b);
-    }
-  });
-
-  // ========================================================
-  // SHEET 1: ALL BOOKING
-  // ========================================================
-  const wsAll = workbook.addWorksheet('All Booking');
-  buildReservationsSheet(wsAll, 'All Booking', sortedBookings);
-
-  // ========================================================
-  // SHEET 2: YESTERDAY (PREVIOUS DAY ORDERS)
-  // ========================================================
-  const yesterdayLabel = `Yesterday (${format(yesterdayStart, 'dd-MMM')})`;
-  const wsYesterday = workbook.addWorksheet('Yesterday');
-  buildReservationsSheet(wsYesterday, yesterdayLabel, yesterdayBookings);
-
-  // ========================================================
-  // SHEET 3: TODAY (TODAY'S DATE BOOKING)
-  // ========================================================
-  const todayLabel = `Today (${format(todayStart, 'dd-MMM')})`;
-  const wsToday = workbook.addWorksheet('Today');
-  buildReservationsSheet(wsToday, todayLabel, todayBookings);
-
-  // ========================================================
-  // SHEET 4+: FUTURE BOOKINGS
-  // If there are future bookings, organize by date sheets or dedicated Upcoming sheet
-  // ========================================================
-  // Group future bookings by specific dates
-  const futureDateGroups = {};
-  futureBookings.forEach(b => {
-    let key = 'Upcoming Stays';
+    let dateKey;
     if (b.checkIn) {
       try {
-        key = format(parseISO(b.checkIn), 'dd-MMM-yyyy');
+        dateKey = format(parseISO(b.checkIn), 'MMM d');
       } catch (e) {
-        key = b.checkIn;
+        dateKey = b.checkIn;
       }
+    } else {
+      dateKey = todayTabName;
     }
-    if (!futureDateGroups[key]) futureDateGroups[key] = [];
-    futureDateGroups[key].push(b);
+
+    if (!bookingsByDate[dateKey]) {
+      bookingsByDate[dateKey] = [];
+    }
+    bookingsByDate[dateKey].push(b);
   });
 
-  const futureDates = Object.keys(futureDateGroups);
-
-  if (futureDates.length > 0) {
-    // 4a. Master Future Bookings sheet
-    const wsFuture = workbook.addWorksheet('Future Bookings');
-    buildReservationsSheet(wsFuture, 'Future Bookings', futureBookings);
-
-    // 4b. Individual date sheets for specific upcoming dates if multiple
-    futureDates.forEach(dateStr => {
-      // Clean sheet name: Excel allows max 31 chars and no / \ ? * : [ ]
-      const safeSheetName = dateStr.replace(/[/\\?*:[\]]/g, '-').substring(0, 31);
-      // Avoid naming collision with existing sheets
-      if (!['All Booking', 'Yesterday', 'Today', 'Future Bookings'].includes(safeSheetName)) {
-        const wsDate = workbook.addWorksheet(safeSheetName);
-        buildReservationsSheet(wsDate, dateStr, futureDateGroups[dateStr]);
-      }
-    });
-  } else {
-    const wsFuture = workbook.addWorksheet('Future Bookings');
-    buildReservationsSheet(wsFuture, 'Future Bookings', []);
+  // Ensure yesterday and today date entries exist so their tabs are always present
+  if (!bookingsByDate[yesterdayTabName]) {
+    bookingsByDate[yesterdayTabName] = [];
   }
+  if (!bookingsByDate[todayTabName]) {
+    bookingsByDate[todayTabName] = [];
+  }
+
+  // ========================================================
+  // TAB 1: "All Bookings"
+  // ========================================================
+  const wsAll = workbook.addWorksheet('All Bookings');
+  buildReservationsSheet(wsAll, 'All Bookings', sortedBookings);
+
+  // ========================================================
+  // TAB 2: Yesterday (e.g. "Oct 23")
+  // ========================================================
+  const wsYesterday = workbook.addWorksheet(yesterdayTabName);
+  buildReservationsSheet(wsYesterday, yesterdayTabName, bookingsByDate[yesterdayTabName]);
+
+  // ========================================================
+  // TAB 3: Today (e.g. "Oct 24")
+  // ========================================================
+  const wsToday = workbook.addWorksheet(todayTabName);
+  buildReservationsSheet(wsToday, todayTabName, bookingsByDate[todayTabName]);
+
+  // ========================================================
+  // TAB 4+: Future dates (e.g. "Oct 25", "Oct 26", etc.)
+  // ========================================================
+  const allDateKeys = Object.keys(bookingsByDate);
+  allDateKeys.forEach(dKey => {
+    // Skip All Bookings, Yesterday, and Today since they are already rendered
+    if (dKey === yesterdayTabName || dKey === todayTabName) return;
+
+    // Check if this date is in the future
+    const wsDate = workbook.addWorksheet(dKey.substring(0, 31));
+    buildReservationsSheet(wsDate, dKey, bookingsByDate[dKey]);
+  });
 
   // Generate buffer and trigger browser download
   const buffer = await workbook.xlsx.writeBuffer();
