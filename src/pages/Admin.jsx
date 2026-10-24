@@ -6,9 +6,10 @@ import {
   Archive, Users, CreditCard, FileText, Tag, Image as ImageIcon, 
   Settings, Search, Bell, Plus, Headset, CalendarCheck, Wallet, 
   PieChart, Users as UsersIcon, ArrowRight, MapPin, Edit2, Trash2, Check, X, MoreVertical,
-  Clock, CheckCircle, Mail, Send, Copy
+  Clock, CheckCircle, Mail, Send, Copy, Download, FileSpreadsheet
 } from 'lucide-react';
 import { format, isSameDay, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
+import * as XLSX from 'xlsx';
 
 export default function Admin() {
   const { properties, bookings, inventoryAlerts, addProperty, removeProperty, updateProperty, rooms, addRoomType, removeRoomType, updateRoomType, removeBooking } = useHotels();
@@ -201,7 +202,7 @@ export default function Admin() {
           {activeTab === 'bookings' && <BookingsView bookings={bookings} removeBooking={removeBooking} searchQuery={searchQuery} />}
           {activeTab === 'rooms' && <RoomsView properties={properties} rooms={rooms} addRoomType={addRoomType} removeRoomType={removeRoomType} updateRoomType={updateRoomType} />}
           {activeTab === 'payments' && <PaymentsView bookings={bookings} />}
-          {activeTab === 'reports' && <ReportsView bookings={bookings} properties={properties} />}
+          {activeTab === 'reports' && <ReportsView bookings={bookings} properties={properties} rooms={rooms} inventoryAlerts={inventoryAlerts} />}
           {activeTab === 'offers' && <OffersView />}
           {activeTab === 'settings' && <SettingsView />}
         </div>
@@ -947,9 +948,49 @@ function BookingsView({ bookings, removeBooking, searchQuery = '' }) {
 
   return (
     <>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: '1.8rem', fontWeight: 600, color: '#111827', marginBottom: 4 }}>All Bookings</h1>
-        <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>View and manage all guest reservations.</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 600, color: '#111827', marginBottom: 4 }}>All Bookings</h1>
+          <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>View and manage all guest reservations.</p>
+        </div>
+        <button
+          onClick={() => {
+            const wb = XLSX.utils.book_new();
+            const rows = filteredBookings.map((b, i) => ({
+              'S.No': i + 1,
+              'Booking ID': `#${b.id.toString().substring(0, 8)}`,
+              'Guest Name': b.name || 'N/A',
+              'Guest Email': b.email || 'N/A',
+              'Guest Phone': b.phone || 'N/A',
+              'Hotel Property': b.hotelName || 'N/A',
+              'Room Category': b.roomName || 'Standard',
+              'Check In': b.checkIn ? format(parseISO(b.checkIn), 'dd-MMM-yyyy') : 'N/A',
+              'Check Out': b.checkOut ? format(parseISO(b.checkOut), 'dd-MMM-yyyy') : 'N/A',
+              'Rooms': b.rooms || 1,
+              'Amount (INR)': b.amount || 0,
+              'Status': b.status || 'Confirmed'
+            }));
+            const ws = XLSX.utils.json_to_sheet(rows);
+            ws['!cols'] = [{ wch: 6 }, { wch: 14 }, { wch: 22 }, { wch: 26 }, { wch: 16 }, { wch: 28 }, { wch: 26 }, { wch: 14 }, { wch: 14 }, { wch: 8 }, { wch: 16 }, { wch: 14 }];
+            XLSX.utils.book_append_sheet(wb, ws, 'Bookings');
+            XLSX.writeFile(wb, `Sabharwal_Bookings_${format(new Date(), 'dd-MMM-yyyy')}.xlsx`);
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            backgroundColor: '#059669',
+            color: 'white',
+            padding: '10px 18px',
+            borderRadius: 8,
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          <FileSpreadsheet size={16} /> Export to Excel
+        </button>
       </div>
 
       <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
@@ -1447,7 +1488,33 @@ function PaymentsView({ bookings }) {
   );
 }
 
-function ReportsView({ bookings, properties }) {
+function ReportsView({ bookings, properties, rooms = [], inventoryAlerts = [] }) {
+  const [selectedPropertyFilter, setSelectedPropertyFilter] = useState('all');
+  const [dateRangeFilter, setDateRangeFilter] = useState('all'); // 'all' | 'this_month' | 'last_month' | 'this_year'
+
+  // Filter bookings according to selections
+  const filteredBookings = bookings.filter(b => {
+    if (selectedPropertyFilter !== 'all' && b.hotelName !== selectedPropertyFilter && b.hotelId !== selectedPropertyFilter) {
+      return false;
+    }
+
+    if (dateRangeFilter !== 'all' && b.checkIn) {
+      const bDate = parseISO(b.checkIn);
+      const now = new Date();
+      if (dateRangeFilter === 'this_month') {
+        if (bDate.getMonth() !== now.getMonth() || bDate.getFullYear() !== now.getFullYear()) return false;
+      } else if (dateRangeFilter === 'last_month') {
+        const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+        const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+        if (bDate.getMonth() !== lastMonth || bDate.getFullYear() !== lastMonthYear) return false;
+      } else if (dateRangeFilter === 'this_year') {
+        if (bDate.getFullYear() !== now.getFullYear()) return false;
+      }
+    }
+
+    return true;
+  });
+
   // Calculate revenue per property
   const revenueByProperty = {};
   properties.forEach(p => {
@@ -1455,14 +1522,20 @@ function ReportsView({ bookings, properties }) {
   });
   
   let totalRevenue = 0;
-  bookings.forEach(b => {
+  let totalRoomsBooked = 0;
+  let confirmedCount = 0;
+
+  filteredBookings.forEach(b => {
     if (b.status === 'Confirmed' || b.status === 'Checked In' || b.status === 'Completed') {
-      if (revenueByProperty[b.hotelName] !== undefined) {
-        revenueByProperty[b.hotelName] += b.amount || 0;
+      const propName = b.hotelName || 'General';
+      if (revenueByProperty[propName] !== undefined) {
+        revenueByProperty[propName] += b.amount || 0;
       } else {
-        revenueByProperty[b.hotelName] = b.amount || 0;
+        revenueByProperty[propName] = b.amount || 0;
       }
       totalRevenue += b.amount || 0;
+      totalRoomsBooked += (b.rooms || 1);
+      confirmedCount += 1;
     }
   });
 
@@ -1472,21 +1545,229 @@ function ReportsView({ bookings, properties }) {
     percentage: totalRevenue > 0 ? (revenueByProperty[name] / totalRevenue) * 100 : 0
   })).sort((a, b) => b.revenue - a.revenue);
 
+  // Helper to trigger styled Excel download
+  const exportToExcel = (mode = 'full') => {
+    try {
+      const wb = XLSX.utils.book_new();
+      const exportTimestamp = format(new Date(), 'dd-MMM-yyyy_HH-mm');
+
+      // 1. Bookings Sheet
+      const bookingsRows = filteredBookings.map((b, idx) => ({
+        'S.No': idx + 1,
+        'Booking ID': `#${b.id.toString().substring(0, 8)}`,
+        'Guest Name': b.name || 'N/A',
+        'Guest Email': b.email || 'N/A',
+        'Guest Phone': b.phone || 'N/A',
+        'Hotel Property': b.hotelName || 'N/A',
+        'Room Category / Name': b.roomName || 'Standard Room',
+        'Check-In Date': b.checkIn ? format(parseISO(b.checkIn), 'dd-MMM-yyyy') : 'N/A',
+        'Check-Out Date': b.checkOut ? format(parseISO(b.checkOut), 'dd-MMM-yyyy') : 'N/A',
+        'Rooms': b.rooms || 1,
+        'Adults': b.adults || 2,
+        'Children': b.children || 0,
+        'Total Amount (INR)': b.amount || 0,
+        'Booking Status': b.status || 'Confirmed',
+        'Special Requests / Notes': b.description || 'None'
+      }));
+
+      const wsBookings = XLSX.utils.json_to_sheet(bookingsRows);
+
+      // Auto-fit column widths for readability
+      wsBookings['!cols'] = [
+        { wch: 6 },  // S.No
+        { wch: 14 }, // Booking ID
+        { wch: 22 }, // Guest Name
+        { wch: 26 }, // Email
+        { wch: 16 }, // Phone
+        { wch: 28 }, // Hotel Property
+        { wch: 30 }, // Room
+        { wch: 14 }, // Check-In
+        { wch: 14 }, // Check-Out
+        { wch: 8 },  // Rooms
+        { wch: 8 },  // Adults
+        { wch: 10 }, // Children
+        { wch: 18 }, // Total Amount
+        { wch: 16 }, // Status
+        { wch: 30 }  // Notes
+      ];
+
+      XLSX.utils.book_append_sheet(wb, wsBookings, 'Reservations');
+
+      // 2. Revenue Summary Sheet
+      const revenueRows = propertyData.map((p, idx) => ({
+        'S.No': idx + 1,
+        'Hotel Property': p.name,
+        'Total Confirmed Revenue (INR)': p.revenue,
+        'Contribution (%)': `${p.percentage.toFixed(1)}%`
+      }));
+
+      // Add summary total row
+      revenueRows.push({
+        'S.No': '',
+        'Hotel Property': 'GRAND TOTAL',
+        'Total Confirmed Revenue (INR)': totalRevenue,
+        'Contribution (%)': '100.0%'
+      });
+
+      const wsRevenue = XLSX.utils.json_to_sheet(revenueRows);
+      wsRevenue['!cols'] = [
+        { wch: 6 },
+        { wch: 30 },
+        { wch: 28 },
+        { wch: 18 }
+      ];
+      XLSX.utils.book_append_sheet(wb, wsRevenue, 'Revenue Summary');
+
+      // 3. Property & Room Inventory Sheet
+      if (rooms && rooms.length > 0) {
+        const inventoryRows = rooms.map((r, idx) => {
+          const prop = properties.find(p => p.id === r.propertyId);
+          return {
+            'S.No': idx + 1,
+            'Hotel Property': prop?.name || 'Sabharwal Residency',
+            'Room Type Name': r.name,
+            'Base Category': r.type || 'Standard',
+            'Nightly Rate (INR)': r.pricePerNight,
+            'Guest Capacity': r.capacity,
+            'Total Units in Inventory': r.totalUnits || 0
+          };
+        });
+
+        const wsInventory = XLSX.utils.json_to_sheet(inventoryRows);
+        wsInventory['!cols'] = [
+          { wch: 6 },
+          { wch: 28 },
+          { wch: 34 },
+          { wch: 16 },
+          { wch: 18 },
+          { wch: 16 },
+          { wch: 22 }
+        ];
+        XLSX.utils.book_append_sheet(wb, wsInventory, 'Room Inventory');
+      }
+
+      // Generate filename based on hotel and timestamp
+      const hotelTag = selectedPropertyFilter === 'all' ? 'All_Hotels' : selectedPropertyFilter.replace(/\s+/g, '_');
+      const filename = `Sabharwal_Hotels_Financial_Report_${hotelTag}_${exportTimestamp}.xlsx`;
+
+      // Download file directly in browser
+      XLSX.writeFile(wb, filename);
+    } catch (err) {
+      console.error("Failed to export Excel report:", err);
+      alert("Encountered an issue exporting the report. Please try again.");
+    }
+  };
+
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+      {/* Top Header & Export Action */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 32 }}>
         <div>
-          <h1 style={{ fontSize: '1.8rem', fontWeight: 600, color: '#111827', marginBottom: 4 }}>Financial Reports</h1>
-          <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>Analyze revenue, occupancy, and growth.</p>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#111827', marginBottom: 4 }}>Financial Reports & Analytics</h1>
+          <p style={{ color: '#6B7280', fontSize: '0.95rem', margin: 0 }}>Analyze revenue, booking trends, and export complete Excel spreadsheets.</p>
+        </div>
+
+        {/* Export Excel Button */}
+        <button
+          onClick={() => exportToExcel('full')}
+          style={{
+            backgroundColor: '#059669',
+            color: 'white',
+            padding: '12px 24px',
+            borderRadius: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            fontWeight: 600,
+            fontSize: '0.95rem',
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#047857'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#059669'}
+        >
+          <FileSpreadsheet size={18} /> Export Excel Report
+        </button>
+      </div>
+
+      {/* Filter Control Bar */}
+      <div style={{ backgroundColor: 'white', padding: '18px 24px', borderRadius: 16, border: '1px solid #E5E7EB', marginBottom: 32, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: '#6B7280', marginBottom: 6 }}>Filter Property</label>
+            <select
+              value={selectedPropertyFilter}
+              onChange={e => setSelectedPropertyFilter(e.target.value)}
+              style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.9rem', color: '#111827', backgroundColor: '#F9FAFB', outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="all">All Properties</option>
+              {properties.map(p => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: '#6B7280', marginBottom: 6 }}>Time Period</label>
+            <select
+              value={dateRangeFilter}
+              onChange={e => setDateRangeFilter(e.target.value)}
+              style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.9rem', color: '#111827', backgroundColor: '#F9FAFB', outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="all">All Time</option>
+              <option value="this_month">This Month</option>
+              <option value="last_month">Last Month</option>
+              <option value="this_year">This Year</option>
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: '0.85rem', color: '#6B7280' }}>
+            Showing <strong>{filteredBookings.length}</strong> bookings ({confirmedCount} confirmed)
+          </span>
+          {(selectedPropertyFilter !== 'all' || dateRangeFilter !== 'all') && (
+            <button
+              onClick={() => { setSelectedPropertyFilter('all'); setDateRangeFilter('all'); }}
+              style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+            >
+              Reset
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Metrics Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20, marginBottom: 32 }}>
+        <div style={{ backgroundColor: 'white', padding: 24, borderRadius: 16, border: '1px solid #E5E7EB', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#6B7280', marginBottom: 8, textTransform: 'uppercase' }}>Total Realized Revenue</div>
+          <div style={{ fontSize: '2rem', fontWeight: 700, color: '#10B981', lineHeight: 1 }}>₹{totalRevenue.toLocaleString()}</div>
+          <div style={{ fontSize: '0.8rem', color: '#9CA3AF', marginTop: 8 }}>From confirmed & completed stays</div>
+        </div>
+
+        <div style={{ backgroundColor: 'white', padding: 24, borderRadius: 16, border: '1px solid #E5E7EB', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#6B7280', marginBottom: 8, textTransform: 'uppercase' }}>Total Rooms Booked</div>
+          <div style={{ fontSize: '2rem', fontWeight: 700, color: '#111827', lineHeight: 1 }}>{totalRoomsBooked}</div>
+          <div style={{ fontSize: '0.8rem', color: '#9CA3AF', marginTop: 8 }}>Across all room categories</div>
+        </div>
+
+        <div style={{ backgroundColor: 'white', padding: 24, borderRadius: 16, border: '1px solid #E5E7EB', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#6B7280', marginBottom: 8, textTransform: 'uppercase' }}>Active Hotel Portfolio</div>
+          <div style={{ fontSize: '2rem', fontWeight: 700, color: '#3B82F6', lineHeight: 1 }}>{properties.length}</div>
+          <div style={{ fontSize: '0.8rem', color: '#9CA3AF', marginTop: 8 }}>{rooms.length} room types configured</div>
         </div>
       </div>
       
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: 24 }}>
+      {/* Charts & Breakdown */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: 24, marginBottom: 32 }}>
         
+        {/* Revenue by Property */}
         <div style={{ backgroundColor: 'white', padding: 32, borderRadius: 16, border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#111827', margin: 0 }}>Revenue by Property</h3>
-            <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#10B981' }}>₹{totalRevenue.toLocaleString()}</span>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#111827', margin: 0 }}>Revenue Breakdown by Hotel</h3>
+            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#10B981' }}>₹{totalRevenue.toLocaleString()}</span>
           </div>
           
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -1494,10 +1775,10 @@ function ReportsView({ bookings, properties }) {
               <div key={idx}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: 8, fontWeight: 500, color: '#4B5563' }}>
                   <span>{prop.name}</span>
-                  <span>₹{prop.revenue.toLocaleString()}</span>
+                  <span style={{ fontWeight: 600, color: '#111827' }}>₹{prop.revenue.toLocaleString()} ({prop.percentage.toFixed(1)}%)</span>
                 </div>
                 <div style={{ width: '100%', height: 12, backgroundColor: '#F3F4F6', borderRadius: 6, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', backgroundColor: 'var(--primary)', width: `${prop.percentage}%`, borderRadius: 6, transition: 'width 1s ease-out' }}></div>
+                  <div style={{ height: '100%', backgroundColor: '#0A192F', width: `${prop.percentage}%`, borderRadius: 6, transition: 'width 1s ease-out' }}></div>
                 </div>
               </div>
             ))}
@@ -1507,17 +1788,17 @@ function ReportsView({ bookings, properties }) {
           </div>
         </div>
 
+        {/* Monthly Occupancy Trends */}
         <div style={{ backgroundColor: 'white', padding: 32, borderRadius: 16, border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' }}>
           <div style={{ marginBottom: 24 }}>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#111827', margin: 0 }}>Monthly Occupancy Trends</h3>
-            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#6B7280' }}>Based on recent confirmed bookings</p>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#6B7280' }}>Based on recent confirmed reservations</p>
           </div>
           
           <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 12, height: 200, paddingBottom: 16, borderBottom: '1px solid #E5E7EB' }}>
-            {/* Simple static bars for demonstration since we only have a few bookings */}
             {[45, 60, 30, 75, 85, 50, 95].map((height, i) => (
               <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: '100%', height: `${height}%`, backgroundColor: i === 6 ? 'var(--primary)' : '#E5E7EB', borderRadius: '4px 4px 0 0', transition: 'height 1s ease-out' }}></div>
+                <div style={{ width: '100%', height: `${height}%`, backgroundColor: i === 6 ? '#0A192F' : '#E5E7EB', borderRadius: '4px 4px 0 0', transition: 'height 1s ease-out' }}></div>
               </div>
             ))}
           </div>
@@ -1532,6 +1813,66 @@ function ReportsView({ bookings, properties }) {
           </div>
         </div>
 
+      </div>
+
+      {/* Recent Transactions Preview Table with Export Action */}
+      <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#111827', margin: 0 }}>Recent Reservation Transactions</h3>
+            <p style={{ fontSize: '0.85rem', color: '#6B7280', margin: '4px 0 0' }}>Included directly in the exported Excel workbook</p>
+          </div>
+          <button
+            onClick={() => exportToExcel('full')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: '1px solid #D1D5DB', backgroundColor: '#F9FAFB', color: '#374151', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+          >
+            <Download size={15} /> Download Spreadsheet
+          </button>
+        </div>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+          <thead style={{ backgroundColor: '#F9FAFB' }}>
+            <tr>
+              <th style={thStyle}>Booking ID</th>
+              <th style={thStyle}>Guest</th>
+              <th style={thStyle}>Hotel</th>
+              <th style={thStyle}>Dates</th>
+              <th style={thStyle}>Rooms</th>
+              <th style={thStyle}>Amount</th>
+              <th style={thStyle}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredBookings.slice(0, 10).map((b, idx) => (
+              <tr key={b.id} style={{ borderBottom: idx === filteredBookings.slice(0, 10).length - 1 ? 'none' : '1px solid #E5E7EB' }}>
+                <td style={{ ...tdStyle, color: '#6B7280', fontSize: '0.85rem' }}>#{b.id.toString().substring(0, 8)}</td>
+                <td style={{ ...tdStyle, fontWeight: 500, color: '#111827' }}>{b.name}</td>
+                <td style={{ ...tdStyle, color: '#4B5563' }}>{b.hotelName}</td>
+                <td style={{ ...tdStyle, color: '#4B5563' }}>
+                  {b.checkIn ? format(parseISO(b.checkIn), 'dd MMM') : '-'} to {b.checkOut ? format(parseISO(b.checkOut), 'dd MMM yyyy') : '-'}
+                </td>
+                <td style={{ ...tdStyle, color: '#4B5563' }}>{b.rooms || 1}</td>
+                <td style={{ ...tdStyle, fontWeight: 600, color: '#111827' }}>₹{(b.amount || 0).toLocaleString()}</td>
+                <td style={tdStyle}>
+                  <span style={{
+                    padding: '4px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600,
+                    color: b.status === 'Confirmed' ? '#10B981' : b.status === 'Checked In' ? '#3B82F6' : '#F59E0B',
+                    backgroundColor: b.status === 'Confirmed' ? '#ECFDF5' : b.status === 'Checked In' ? '#EFF6FF' : '#FEF3C7'
+                  }}>
+                    {b.status || 'Confirmed'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+            {filteredBookings.length === 0 && (
+              <tr>
+                <td colSpan="7" style={{ padding: 40, textAlign: 'center', color: '#6B7280' }}>
+                  No reservations found for the selected filter criteria.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </>
   );
