@@ -9,7 +9,7 @@ import {
   Clock, CheckCircle, Mail, Send, Copy, Download, FileSpreadsheet
 } from 'lucide-react';
 import { format, isSameDay, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
-import * as XLSX from 'xlsx';
+import { exportCorporateHotelExcel } from '../utils/excelExporter';
 
 export default function Admin() {
   const { properties, bookings, inventoryAlerts, addProperty, removeProperty, updateProperty, rooms, addRoomType, removeRoomType, updateRoomType, removeBooking } = useHotels();
@@ -199,7 +199,7 @@ export default function Admin() {
           {activeTab === 'dashboard' && <DashboardView setActiveTab={setActiveTab} properties={properties} bookings={bookings} inventoryAlerts={inventoryAlerts} rooms={rooms} adminProfile={adminProfile} />}
           {activeTab === 'guests' && <GuestsView />}
           {activeTab === 'properties' && <PropertiesView properties={properties} addProperty={addProperty} removeProperty={removeProperty} updateProperty={updateProperty} rooms={rooms} />}
-          {activeTab === 'bookings' && <BookingsView bookings={bookings} removeBooking={removeBooking} searchQuery={searchQuery} />}
+          {activeTab === 'bookings' && <BookingsView bookings={bookings} properties={properties} rooms={rooms} removeBooking={removeBooking} searchQuery={searchQuery} />}
           {activeTab === 'rooms' && <RoomsView properties={properties} rooms={rooms} addRoomType={addRoomType} removeRoomType={removeRoomType} updateRoomType={updateRoomType} />}
           {activeTab === 'payments' && <PaymentsView bookings={bookings} />}
           {activeTab === 'reports' && <ReportsView bookings={bookings} properties={properties} rooms={rooms} inventoryAlerts={inventoryAlerts} />}
@@ -329,7 +329,30 @@ function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, ro
           <p style={{ color: '#6B7280', fontSize: '1.05rem', margin: '8px 0 0' }}>Here's what's happening across your hotels today.</p>
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => exportCorporateHotelExcel({ bookings, properties, rooms, filterHotel: 'all', filterDate: 'all' })}
+            style={{
+              backgroundColor: '#059669',
+              color: 'white',
+              padding: '12px 20px',
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#047857'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#059669'}
+          >
+            <FileSpreadsheet size={18} /> Export Excel Report
+          </button>
+
           <div 
             style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', position: 'relative', padding: 8, borderRadius: 12, transition: 'background 0.2s' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F3F4F6'}
@@ -937,7 +960,7 @@ function PropertiesView({ properties, addProperty, removeProperty, updatePropert
   );
 }
 
-function BookingsView({ bookings, removeBooking, searchQuery = '' }) {
+function BookingsView({ bookings, properties = [], rooms = [], removeBooking, searchQuery = '' }) {
   const filteredBookings = bookings.filter(b => {
     const q = searchQuery.toLowerCase();
     return b.name.toLowerCase().includes(q) || 
@@ -954,27 +977,7 @@ function BookingsView({ bookings, removeBooking, searchQuery = '' }) {
           <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>View and manage all guest reservations.</p>
         </div>
         <button
-          onClick={() => {
-            const wb = XLSX.utils.book_new();
-            const rows = filteredBookings.map((b, i) => ({
-              'S.No': i + 1,
-              'Booking ID': `#${b.id.toString().substring(0, 8)}`,
-              'Guest Name': b.name || 'N/A',
-              'Guest Email': b.email || 'N/A',
-              'Guest Phone': b.phone || 'N/A',
-              'Hotel Property': b.hotelName || 'N/A',
-              'Room Category': b.roomName || 'Standard',
-              'Check In': b.checkIn ? format(parseISO(b.checkIn), 'dd-MMM-yyyy') : 'N/A',
-              'Check Out': b.checkOut ? format(parseISO(b.checkOut), 'dd-MMM-yyyy') : 'N/A',
-              'Rooms': b.rooms || 1,
-              'Amount (INR)': b.amount || 0,
-              'Status': b.status || 'Confirmed'
-            }));
-            const ws = XLSX.utils.json_to_sheet(rows);
-            ws['!cols'] = [{ wch: 6 }, { wch: 14 }, { wch: 22 }, { wch: 26 }, { wch: 16 }, { wch: 28 }, { wch: 26 }, { wch: 14 }, { wch: 14 }, { wch: 8 }, { wch: 16 }, { wch: 14 }];
-            XLSX.utils.book_append_sheet(wb, ws, 'Bookings');
-            XLSX.writeFile(wb, `Sabharwal_Bookings_${format(new Date(), 'dd-MMM-yyyy')}.xlsx`);
-          }}
+          onClick={() => exportCorporateHotelExcel({ bookings: filteredBookings, properties, rooms, filterHotel: 'all', filterDate: 'all' })}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -1545,113 +1548,16 @@ function ReportsView({ bookings, properties, rooms = [], inventoryAlerts = [] })
     percentage: totalRevenue > 0 ? (revenueByProperty[name] / totalRevenue) * 100 : 0
   })).sort((a, b) => b.revenue - a.revenue);
 
-  // Helper to trigger styled Excel download
-  const exportToExcel = (mode = 'full') => {
+  // Helper to trigger styled Corporate Excel download
+  const exportToExcel = async () => {
     try {
-      const wb = XLSX.utils.book_new();
-      const exportTimestamp = format(new Date(), 'dd-MMM-yyyy_HH-mm');
-
-      // 1. Bookings Sheet
-      const bookingsRows = filteredBookings.map((b, idx) => ({
-        'S.No': idx + 1,
-        'Booking ID': `#${b.id.toString().substring(0, 8)}`,
-        'Guest Name': b.name || 'N/A',
-        'Guest Email': b.email || 'N/A',
-        'Guest Phone': b.phone || 'N/A',
-        'Hotel Property': b.hotelName || 'N/A',
-        'Room Category / Name': b.roomName || 'Standard Room',
-        'Check-In Date': b.checkIn ? format(parseISO(b.checkIn), 'dd-MMM-yyyy') : 'N/A',
-        'Check-Out Date': b.checkOut ? format(parseISO(b.checkOut), 'dd-MMM-yyyy') : 'N/A',
-        'Rooms': b.rooms || 1,
-        'Adults': b.adults || 2,
-        'Children': b.children || 0,
-        'Total Amount (INR)': b.amount || 0,
-        'Booking Status': b.status || 'Confirmed',
-        'Special Requests / Notes': b.description || 'None'
-      }));
-
-      const wsBookings = XLSX.utils.json_to_sheet(bookingsRows);
-
-      // Auto-fit column widths for readability
-      wsBookings['!cols'] = [
-        { wch: 6 },  // S.No
-        { wch: 14 }, // Booking ID
-        { wch: 22 }, // Guest Name
-        { wch: 26 }, // Email
-        { wch: 16 }, // Phone
-        { wch: 28 }, // Hotel Property
-        { wch: 30 }, // Room
-        { wch: 14 }, // Check-In
-        { wch: 14 }, // Check-Out
-        { wch: 8 },  // Rooms
-        { wch: 8 },  // Adults
-        { wch: 10 }, // Children
-        { wch: 18 }, // Total Amount
-        { wch: 16 }, // Status
-        { wch: 30 }  // Notes
-      ];
-
-      XLSX.utils.book_append_sheet(wb, wsBookings, 'Reservations');
-
-      // 2. Revenue Summary Sheet
-      const revenueRows = propertyData.map((p, idx) => ({
-        'S.No': idx + 1,
-        'Hotel Property': p.name,
-        'Total Confirmed Revenue (INR)': p.revenue,
-        'Contribution (%)': `${p.percentage.toFixed(1)}%`
-      }));
-
-      // Add summary total row
-      revenueRows.push({
-        'S.No': '',
-        'Hotel Property': 'GRAND TOTAL',
-        'Total Confirmed Revenue (INR)': totalRevenue,
-        'Contribution (%)': '100.0%'
+      await exportCorporateHotelExcel({
+        bookings,
+        properties,
+        rooms,
+        filterHotel: selectedPropertyFilter,
+        filterDate: dateRangeFilter
       });
-
-      const wsRevenue = XLSX.utils.json_to_sheet(revenueRows);
-      wsRevenue['!cols'] = [
-        { wch: 6 },
-        { wch: 30 },
-        { wch: 28 },
-        { wch: 18 }
-      ];
-      XLSX.utils.book_append_sheet(wb, wsRevenue, 'Revenue Summary');
-
-      // 3. Property & Room Inventory Sheet
-      if (rooms && rooms.length > 0) {
-        const inventoryRows = rooms.map((r, idx) => {
-          const prop = properties.find(p => p.id === r.propertyId);
-          return {
-            'S.No': idx + 1,
-            'Hotel Property': prop?.name || 'Sabharwal Residency',
-            'Room Type Name': r.name,
-            'Base Category': r.type || 'Standard',
-            'Nightly Rate (INR)': r.pricePerNight,
-            'Guest Capacity': r.capacity,
-            'Total Units in Inventory': r.totalUnits || 0
-          };
-        });
-
-        const wsInventory = XLSX.utils.json_to_sheet(inventoryRows);
-        wsInventory['!cols'] = [
-          { wch: 6 },
-          { wch: 28 },
-          { wch: 34 },
-          { wch: 16 },
-          { wch: 18 },
-          { wch: 16 },
-          { wch: 22 }
-        ];
-        XLSX.utils.book_append_sheet(wb, wsInventory, 'Room Inventory');
-      }
-
-      // Generate filename based on hotel and timestamp
-      const hotelTag = selectedPropertyFilter === 'all' ? 'All_Hotels' : selectedPropertyFilter.replace(/\s+/g, '_');
-      const filename = `Sabharwal_Hotels_Financial_Report_${hotelTag}_${exportTimestamp}.xlsx`;
-
-      // Download file directly in browser
-      XLSX.writeFile(wb, filename);
     } catch (err) {
       console.error("Failed to export Excel report:", err);
       alert("Encountered an issue exporting the report. Please try again.");
