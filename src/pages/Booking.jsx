@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import { useHotels } from '../context/HotelContext';
-import { Calendar as CalendarIcon, Users, ArrowLeft, CheckCircle, X, Plus, Minus, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, ArrowLeft, CheckCircle, X, Plus, Minus, Lock, User, Eye, EyeOff, AlertCircle, Clock, Wind, Flame, Sparkles } from 'lucide-react';
 import { format, parseISO, differenceInDays, areIntervalsOverlapping, isSameDay } from 'date-fns';
 import Footer from '../components/Footer';
 
@@ -13,6 +13,36 @@ export default function Booking() {
 
   const property = properties.find(p => p.id === propertyId);
   const propertyRooms = rooms.filter(r => r.propertyId === propertyId);
+
+  // Quick filters for Stay Duration and Cooling Type
+  const [durationFilter, setDurationFilter] = useState('all'); // 'all' | '24h' | '12h'
+  const [acFilter, setAcFilter] = useState('all'); // 'all' | 'ac' | 'non-ac'
+
+  // Filtered rooms based on user selection
+  const filteredPropertyRooms = propertyRooms.filter(room => {
+    const nameLower = (room.name || '').toLowerCase();
+
+    // Duration check
+    if (durationFilter === '12h') {
+      const is12h = nameLower.includes('12 hr') || nameLower.includes('12-hr') || nameLower.includes('12hr') || nameLower.includes('12 hours') || nameLower.includes('12hrs') || nameLower.includes('12 hrs');
+      if (!is12h) return false;
+    } else if (durationFilter === '24h') {
+      const is12h = nameLower.includes('12 hr') || nameLower.includes('12-hr') || nameLower.includes('12hr') || nameLower.includes('12 hours') || nameLower.includes('12hrs') || nameLower.includes('12 hrs');
+      if (is12h) return false;
+    }
+
+    // Cooling check (AC vs Non-AC)
+    const isNonAc = nameLower.includes('non-ac') || nameLower.includes('non ac') || nameLower.includes('non a/c') || nameLower.includes('non-a/c');
+    const isAc = (nameLower.includes('ac') || nameLower.includes('a/c')) && !isNonAc;
+
+    if (acFilter === 'ac') {
+      if (!isAc) return false;
+    } else if (acFilter === 'non-ac') {
+      if (!isNonAc) return false;
+    }
+
+    return true;
+  });
 
   // Initialize state from router state or defaults
   const [checkIn, setCheckIn] = useState(location.state?.checkIn ? parseISO(location.state.checkIn) : new Date());
@@ -374,11 +404,159 @@ export default function Booking() {
             </div>
           </div>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', marginBottom: 24, fontFamily: 'Playfair Display, serif' }}>Select rooms</h2>
+          {/* Filter Bar: Stay Duration & AC / Non-AC */}
+          <div style={{ backgroundColor: 'white', padding: '18px 24px', borderRadius: 16, border: '1px solid #E5E7EB', marginBottom: 24, boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'space-between', alignItems: 'center' }}>
+              
+              {/* Duration filter */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 280px' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6B7280', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Clock size={14} color="#0A192F" /> Stay Duration
+                </span>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setDurationFilter('all')}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 20,
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: durationFilter === 'all' ? '1.5px solid #0A192F' : '1px solid #D1D5DB',
+                      backgroundColor: durationFilter === 'all' ? '#0A192F' : '#F9FAFB',
+                      color: durationFilter === 'all' ? '#FFFFFF' : '#374151',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    All Stays
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDurationFilter('24h')}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 20,
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: durationFilter === '24h' ? '1.5px solid #0A192F' : '1px solid #D1D5DB',
+                      backgroundColor: durationFilter === '24h' ? '#0A192F' : '#F9FAFB',
+                      color: durationFilter === '24h' ? '#FFFFFF' : '#374151',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    24 Hours Stay
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDurationFilter('12h')}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 20,
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: durationFilter === '12h' ? '1.5px solid #0A192F' : '1px solid #D1D5DB',
+                      backgroundColor: durationFilter === '12h' ? '#0A192F' : '#F9FAFB',
+                      color: durationFilter === '12h' ? '#FFFFFF' : '#374151',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    12 Hours Stay
+                  </button>
+                </div>
+              </div>
+
+              {/* AC / Non-AC filter */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 280px' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6B7280', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Wind size={14} color="#0A192F" /> Room Type
+                </span>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setAcFilter('all')}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 20,
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: acFilter === 'all' ? '1.5px solid #0A192F' : '1px solid #D1D5DB',
+                      backgroundColor: acFilter === 'all' ? '#0A192F' : '#F9FAFB',
+                      color: acFilter === 'all' ? '#FFFFFF' : '#374151',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    All Types
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAcFilter('ac')}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 20,
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: acFilter === 'ac' ? '1.5px solid #0A192F' : '1px solid #D1D5DB',
+                      backgroundColor: acFilter === 'ac' ? '#0A192F' : '#F9FAFB',
+                      color: acFilter === 'ac' ? '#FFFFFF' : '#374151',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    AC Rooms
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAcFilter('non-ac')}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 20,
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: acFilter === 'non-ac' ? '1.5px solid #0A192F' : '1px solid #D1D5DB',
+                      backgroundColor: acFilter === 'non-ac' ? '#0A192F' : '#F9FAFB',
+                      color: acFilter === 'non-ac' ? '#FFFFFF' : '#374151',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    Non-AC Rooms
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Active filter summary & quick reset */}
+            {(durationFilter !== 'all' || acFilter !== 'all') && (
+              <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ color: '#4B5563' }}>
+                  Showing <strong style={{ color: '#111827' }}>{filteredPropertyRooms.length}</strong> matching {filteredPropertyRooms.length === 1 ? 'room' : 'rooms'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => { setDurationFilter('all'); setAcFilter('all'); }}
+                  style={{ background: 'none', border: 'none', color: '#EF4444', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem', padding: '2px 6px' }}
+                >
+                  Reset filters
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', margin: 0, fontFamily: 'Playfair Display, serif' }}>Select rooms</h2>
+            <span style={{ fontSize: '0.9rem', color: '#6B7280', fontWeight: 500 }}>
+              {filteredPropertyRooms.length} {filteredPropertyRooms.length === 1 ? 'option' : 'options'} available
+            </span>
+          </div>
 
           {/* Rooms List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {propertyRooms.length > 0 ? propertyRooms.map(room => {
+            {filteredPropertyRooms.length > 0 ? filteredPropertyRooms.map(room => {
               // Calculate overlapping bookings for this specific room type
               const overlappingBookings = bookings.filter(b => {
                 if (b.roomId !== room.id && b.hotelId !== room.propertyId) return false;
@@ -474,8 +652,24 @@ export default function Booking() {
                 </div>
               );
             }) : (
-              <div style={{ padding: 40, textAlign: 'center', backgroundColor: 'white', borderRadius: 12, border: '1px solid #E5E7EB' }}>
-                <p style={{ color: '#6B7280' }}>No rooms have been added to this property yet.</p>
+              <div style={{ padding: 48, textAlign: 'center', backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                {propertyRooms.length > 0 ? (
+                  <div>
+                    <p style={{ color: '#111827', fontWeight: 600, fontSize: '1.05rem', marginBottom: 8 }}>No rooms match your filter criteria</p>
+                    <p style={{ color: '#6B7280', fontSize: '0.9rem', marginBottom: 20 }}>
+                      Try selecting "All Stays" or "All Types" to see all available options.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => { setDurationFilter('all'); setAcFilter('all'); }}
+                      style={{ padding: '10px 20px', borderRadius: 8, backgroundColor: '#0A192F', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer', fontSize: '0.9rem' }}
+                    >
+                      Show All Rooms
+                    </button>
+                  </div>
+                ) : (
+                  <p style={{ color: '#6B7280' }}>No rooms have been added to this property yet.</p>
+                )}
               </div>
             )}
           </div>
