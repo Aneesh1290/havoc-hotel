@@ -155,4 +155,16 @@ try {
   db.exec("ALTER TABLE bookings ADD COLUMN notes TEXT");
 } catch (e) {}
 
+try {
+  db.exec("ALTER TABLE admins ADD COLUMN name TEXT");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE admins ADD COLUMN role TEXT DEFAULT 'admin'");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE admins ADD COLUMN allowedProperties TEXT DEFAULT '[]'");
+} catch (e) {}
+
 export default db;

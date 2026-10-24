@@ -47,7 +47,7 @@ if (adminCount.count === 0) {
   db.prepare('INSERT INTO admins (username, password_hash) VALUES (?, ?)').run('admin', hash);
 }
 
-// --- AUTH API ---
+// --- AUTH & USER MANAGEMENT API ---
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   try {
@@ -61,8 +61,133 @@ app.post('/api/login', (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    const token = jwt.sign({ id: admin.id, username: admin.username }, JWT_SECRET, { expiresIn: '24h' });
-    res.json({ success: true, token });
+    let allowedProps = [];
+    try {
+      allowedProps = admin.allowedProperties ? JSON.parse(admin.allowedProperties) : [];
+    } catch (e) {
+      allowedProps = [];
+    }
+
+    const userData = {
+      id: admin.id,
+      username: admin.username,
+      name: admin.name || admin.username,
+      role: admin.role || (admin.username === 'admin' ? 'superadmin' : 'staff'),
+      allowedProperties: allowedProps
+    };
+
+    const token = jwt.sign(userData, JWT_SECRET, { expiresIn: '24h' });
+    res.json({ success: true, token, user: userData });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all dashboard users / staff
+app.get('/api/admin/users', (req, res) => {
+  try {
+    const users = db.prepare('SELECT id, username, name, role, allowedProperties FROM admins').all();
+    const formatted = users.map(u => {
+      let props = [];
+      try {
+        props = u.allowedProperties ? JSON.parse(u.allowedProperties) : [];
+      } catch (e) {
+        props = [];
+      }
+      return {
+        ...u,
+        allowedProperties: props
+      };
+    });
+    res.json(formatted);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create new dashboard user with property permissions
+app.post('/api/admin/users', (req, res) => {
+  const { username, password, name, role, allowedProperties } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+
+  try {
+    const existing = db.prepare('SELECT id FROM admins WHERE username = ?').get(username.trim());
+    if (existing) {
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+
+    const hash = bcrypt.hashSync(password, 10);
+    const propsJson = JSON.stringify(Array.isArray(allowedProperties) ? allowedProperties : []);
+    const userRole = role || 'staff';
+    const userName = name || username.trim();
+
+    const info = db.prepare(
+      'INSERT INTO admins (username, password_hash, name, role, allowedProperties) VALUES (?, ?, ?, ?, ?)'
+    ).run(username.trim(), hash, userName, userRole, propsJson);
+
+    res.json({
+      success: true,
+      user: {
+        id: info.lastInsertRowid,
+        username: username.trim(),
+        name: userName,
+        role: userRole,
+        allowedProperties: Array.isArray(allowedProperties) ? allowedProperties : []
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update dashboard user permissions or details
+app.put('/api/admin/users/:id', (req, res) => {
+  const { id } = req.params;
+  const { name, role, allowedProperties, password } = req.body;
+
+  try {
+    const user = db.prepare('SELECT * FROM admins WHERE id = ?').get(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const updatedName = name !== undefined ? name : user.name;
+    const updatedRole = role !== undefined ? role : user.role;
+    const updatedProps = allowedProperties !== undefined 
+      ? JSON.stringify(Array.isArray(allowedProperties) ? allowedProperties : [])
+      : user.allowedProperties;
+
+    if (password && password.trim()) {
+      const hash = bcrypt.hashSync(password.trim(), 10);
+      db.prepare('UPDATE admins SET name = ?, role = ?, allowedProperties = ?, password_hash = ? WHERE id = ?')
+        .run(updatedName, updatedRole, updatedProps, hash, id);
+    } else {
+      db.prepare('UPDATE admins SET name = ?, role = ?, allowedProperties = ? WHERE id = ?')
+        .run(updatedName, updatedRole, updatedProps, id);
+    }
+
+    res.json({ success: true, message: 'User updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete dashboard user
+app.delete('/api/admin/users/:id', (req, res) => {
+  const { id } = req.params;
+  try {
+    const user = db.prepare('SELECT * FROM admins WHERE id = ?').get(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    if (user.username === 'admin') {
+      return res.status(400).json({ error: 'Cannot delete the primary root admin' });
+    }
+
+    db.prepare('DELETE FROM admins WHERE id = ?').run(id);
+    res.json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -6,7 +6,7 @@ import {
   Archive, Users, CreditCard, FileText, Tag, Image as ImageIcon, 
   Settings, Search, Bell, Plus, Headset, CalendarCheck, Wallet, 
   PieChart, Users as UsersIcon, ArrowRight, MapPin, Edit2, Trash2, Check, X, MoreVertical,
-  Clock, CheckCircle, Mail, Send, Copy, Download, FileSpreadsheet
+  Clock, CheckCircle, Mail, Send, Copy, Download, FileSpreadsheet, UserCheck, ShieldCheck, Key
 } from 'lucide-react';
 import { format, isSameDay, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
 import { exportCorporateHotelExcel } from '../utils/excelExporter';
@@ -19,6 +19,14 @@ export default function Admin() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('adminToken'));
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState('');
+  const [loggedInUser, setLoggedInUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('adminUserData');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -32,6 +40,10 @@ export default function Admin() {
       const data = await res.json();
       if (data.success) {
         localStorage.setItem('adminToken', data.token);
+        if (data.user) {
+          localStorage.setItem('adminUserData', JSON.stringify(data.user));
+          setLoggedInUser(data.user);
+        }
         setIsLoggedIn(true);
       } else {
         setLoginError(data.error || 'Login failed');
@@ -43,16 +55,21 @@ export default function Admin() {
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUserData');
+    setLoggedInUser(null);
     setIsLoggedIn(false);
   };
   
   const [adminProfile, setAdminProfile] = useState(() => {
     const saved = localStorage.getItem('adminProfileData');
-    return saved ? JSON.parse(saved) : {
-      name: 'Aneesh P',
-      role: 'Administrator',
+    if (saved) return JSON.parse(saved);
+    const u = localStorage.getItem('adminUserData');
+    const parsedUser = u ? JSON.parse(u) : null;
+    return {
+      name: parsedUser?.name || 'Administrator',
+      role: parsedUser?.role === 'superadmin' ? 'Super Admin' : (parsedUser?.role === 'manager' ? 'Hotel Manager' : 'Staff'),
       image: 'https://i.pravatar.cc/150?img=11',
-      firstName: 'Aneesh'
+      firstName: parsedUser?.name?.split(' ')[0] || 'Admin'
     };
   });
   const [showProfileEdit, setShowProfileEdit] = useState(false);
@@ -132,6 +149,25 @@ export default function Admin() {
     );
   }
 
+  // Filter properties and bookings based on user permissions
+  const isSuperAdmin = !loggedInUser || loggedInUser.role === 'superadmin' || loggedInUser.username === 'admin';
+  const allowedPropIds = loggedInUser?.allowedProperties || [];
+
+  const accessibleProperties = isSuperAdmin
+    ? properties
+    : properties.filter(p => allowedPropIds.includes(p.id) || allowedPropIds.includes(p.name));
+
+  const accessibleBookings = isSuperAdmin
+    ? bookings
+    : bookings.filter(b => {
+        if (!b.hotelId && !b.hotelName) return false;
+        return allowedPropIds.includes(b.hotelId) || allowedPropIds.includes(b.hotelName);
+      });
+
+  const accessibleRooms = isSuperAdmin
+    ? rooms
+    : rooms.filter(r => allowedPropIds.includes(r.propertyId));
+
   return (
     <div style={{ display: 'flex', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'var(--font-sans)', overflow: 'hidden' }}>
       
@@ -145,6 +181,9 @@ export default function Admin() {
         
         <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
           <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+          {isSuperAdmin && (
+            <NavItem icon={<ShieldCheck size={20} />} label="Staff & Permissions" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
+          )}
           <NavItem icon={<Users size={20} />} label="Registered Guests" active={activeTab === 'guests'} onClick={() => setActiveTab('guests')} />
           <NavItem icon={<CalendarDays size={20} />} label="Bookings" active={activeTab === 'bookings'} onClick={() => setActiveTab('bookings')} />
           <NavItem icon={<Building2 size={20} />} label="Properties" active={activeTab === 'properties'} onClick={() => setActiveTab('properties')} />
@@ -185,7 +224,9 @@ export default function Admin() {
               <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundImage: `url(${adminProfile.image})`, backgroundSize: 'cover' }}></div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#111827' }}>{adminProfile.name}</span>
-                <span style={{ fontSize: '0.8rem', color: '#6B7280' }}>{adminProfile.role}</span>
+                <span style={{ fontSize: '0.8rem', color: '#6B7280' }}>
+                  {adminProfile.role} {!isSuperAdmin && `(${accessibleProperties.length} Hotel${accessibleProperties.length !== 1 ? 's' : ''})`}
+                </span>
               </div>
             </div>
             <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', padding: '8px 12px', borderRadius: 6 }}>
@@ -196,13 +237,14 @@ export default function Admin() {
 
         {/* Dynamic Content */}
         <div style={{ padding: '0 40px 40px' }}>
-          {activeTab === 'dashboard' && <DashboardView setActiveTab={setActiveTab} properties={properties} bookings={bookings} inventoryAlerts={inventoryAlerts} rooms={rooms} adminProfile={adminProfile} />}
+          {activeTab === 'dashboard' && <DashboardView setActiveTab={setActiveTab} properties={accessibleProperties} bookings={accessibleBookings} inventoryAlerts={inventoryAlerts} rooms={accessibleRooms} adminProfile={adminProfile} />}
+          {activeTab === 'users' && <UsersManagementView properties={properties} />}
           {activeTab === 'guests' && <GuestsView />}
-          {activeTab === 'properties' && <PropertiesView properties={properties} bookings={bookings} addProperty={addProperty} removeProperty={removeProperty} updateProperty={updateProperty} rooms={rooms} />}
-          {activeTab === 'bookings' && <BookingsView bookings={bookings} properties={properties} rooms={rooms} removeBooking={removeBooking} searchQuery={searchQuery} />}
-          {activeTab === 'rooms' && <RoomsView properties={properties} rooms={rooms} addRoomType={addRoomType} removeRoomType={removeRoomType} updateRoomType={updateRoomType} />}
-          {activeTab === 'payments' && <PaymentsView bookings={bookings} properties={properties} />}
-          {activeTab === 'reports' && <ReportsView bookings={bookings} properties={properties} rooms={rooms} inventoryAlerts={inventoryAlerts} />}
+          {activeTab === 'properties' && <PropertiesView properties={accessibleProperties} bookings={accessibleBookings} addProperty={addProperty} removeProperty={removeProperty} updateProperty={updateProperty} rooms={accessibleRooms} isSuperAdmin={isSuperAdmin} />}
+          {activeTab === 'bookings' && <BookingsView bookings={accessibleBookings} properties={accessibleProperties} rooms={accessibleRooms} removeBooking={removeBooking} searchQuery={searchQuery} />}
+          {activeTab === 'rooms' && <RoomsView properties={accessibleProperties} rooms={accessibleRooms} addRoomType={addRoomType} removeRoomType={removeRoomType} updateRoomType={updateRoomType} />}
+          {activeTab === 'payments' && <PaymentsView bookings={accessibleBookings} properties={accessibleProperties} />}
+          {activeTab === 'reports' && <ReportsView bookings={accessibleBookings} properties={accessibleProperties} rooms={accessibleRooms} inventoryAlerts={inventoryAlerts} />}
           {activeTab === 'offers' && <OffersView />}
           {activeTab === 'settings' && <SettingsView />}
         </div>
@@ -617,6 +659,465 @@ function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, ro
         </DashboardCard>
       </div>
     </>
+  );
+}
+
+function UsersManagementView({ properties = [] }) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingUserId, setEditingUserId] = useState(null);
+  const [userForm, setUserForm] = useState({
+    username: '',
+    password: '',
+    name: '',
+    role: 'staff',
+    allowedProperties: []
+  });
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/admin/users');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setUsers(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch admin users:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const handleOpenAdd = () => {
+    setIsEditing(false);
+    setEditingUserId(null);
+    setUserForm({
+      username: '',
+      password: '',
+      name: '',
+      role: 'staff',
+      allowedProperties: []
+    });
+    setShowModal(true);
+  };
+
+  const handleOpenEdit = (user) => {
+    setIsEditing(true);
+    setEditingUserId(user.id);
+    setUserForm({
+      username: user.username,
+      password: '',
+      name: user.name || '',
+      role: user.role || 'staff',
+      allowedProperties: Array.isArray(user.allowedProperties) ? user.allowedProperties : []
+    });
+    setShowModal(true);
+  };
+
+  const togglePropertyPermission = (propId) => {
+    setUserForm(prev => {
+      const current = prev.allowedProperties || [];
+      if (current.includes(propId)) {
+        return { ...prev, allowedProperties: current.filter(id => id !== propId) };
+      } else {
+        return { ...prev, allowedProperties: [...current, propId] };
+      }
+    });
+  };
+
+  const handleSelectAllProperties = () => {
+    setUserForm(prev => ({
+      ...prev,
+      allowedProperties: properties.map(p => p.id)
+    }));
+  };
+
+  const handleClearAllProperties = () => {
+    setUserForm(prev => ({
+      ...prev,
+      allowedProperties: []
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!userForm.username.trim()) {
+      return alert("Username is required");
+    }
+
+    if (!isEditing && !userForm.password.trim()) {
+      return alert("Password is required for new user");
+    }
+
+    try {
+      if (isEditing) {
+        const payload = {
+          name: userForm.name.trim(),
+          role: userForm.role,
+          allowedProperties: userForm.allowedProperties
+        };
+        if (userForm.password.trim()) {
+          payload.password = userForm.password.trim();
+        }
+
+        const res = await fetch(`/api/admin/users/${editingUserId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert("User updated successfully!");
+          setShowModal(false);
+          loadUsers();
+        } else {
+          alert(data.error || "Failed to update user");
+        }
+      } else {
+        const res = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: userForm.username.trim(),
+            password: userForm.password.trim(),
+            name: userForm.name.trim() || userForm.username.trim(),
+            role: userForm.role,
+            allowedProperties: userForm.allowedProperties
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert("New dashboard user created successfully!");
+          setShowModal(false);
+          loadUsers();
+        } else {
+          alert(data.error || "Failed to create user");
+        }
+      }
+    } catch (err) {
+      alert("Error saving user. Please try again.");
+    }
+  };
+
+  const handleDelete = async (user) => {
+    if (user.username === 'admin') {
+      return alert("The root administrator account cannot be removed.");
+    }
+    if (!window.confirm(`Are you sure you want to remove user "${user.username}"?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        loadUsers();
+      } else {
+        alert(data.error || "Failed to delete user");
+      }
+    } catch (err) {
+      alert("Error deleting user");
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 28 }}>
+        <div>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#111827', margin: '0 0 4px', fontFamily: 'var(--font-serif)' }}>Staff & User Permissions</h1>
+          <p style={{ color: '#6B7280', fontSize: '0.95rem', margin: 0 }}>
+            Create accounts for staff or hotel managers and restrict their access to specific properties.
+          </p>
+        </div>
+
+        <button 
+          onClick={handleOpenAdd}
+          style={{ backgroundColor: '#0A192F', color: 'white', padding: '10px 20px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: '0.92rem', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(10, 25, 47, 0.2)' }}
+        >
+          <Plus size={18} /> Add New User
+        </button>
+      </div>
+
+      <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+          <thead style={{ backgroundColor: '#F9FAFB' }}>
+            <tr>
+              <th style={thStyle}>Staff Member / Username</th>
+              <th style={thStyle}>Role</th>
+              <th style={thStyle}>Assigned Properties</th>
+              <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u, idx) => {
+              const isRoot = u.username === 'admin';
+              const userPropIds = Array.isArray(u.allowedProperties) ? u.allowedProperties : [];
+              const assignedPropNames = isRoot
+                ? ['All Properties (Root Access)']
+                : userPropIds.length === 0
+                  ? ['No properties assigned']
+                  : userPropIds.map(id => {
+                      const found = properties.find(p => p.id === id || p.name === id);
+                      return found ? found.name : id;
+                    });
+
+              return (
+                <tr key={u.id || idx} style={{ borderBottom: idx === users.length - 1 ? 'none' : '1px solid #E5E7EB' }}>
+                  <td style={tdStyle}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: isRoot ? '#FEF3C7' : '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: isRoot ? '#B45309' : '#1E40AF' }}>
+                        {isRoot ? <ShieldCheck size={20} /> : <UserCheck size={20} />}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: '#111827', fontSize: '0.95rem' }}>{u.name || u.username}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#6B7280' }}>@{u.username}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={tdStyle}>
+                    <span style={{ 
+                      padding: '4px 10px', 
+                      borderRadius: 20, 
+                      fontSize: '0.78rem', 
+                      fontWeight: 600, 
+                      backgroundColor: isRoot ? '#FEF3C7' : (u.role === 'manager' ? '#ECFDF5' : '#F3F4F6'),
+                      color: isRoot ? '#92400E' : (u.role === 'manager' ? '#065F46' : '#374151')
+                    }}>
+                      {isRoot ? 'Super Admin' : (u.role === 'manager' ? 'Hotel Manager' : 'Staff Member')}
+                    </span>
+                  </td>
+                  <td style={tdStyle}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxWidth: 420 }}>
+                      {isRoot ? (
+                        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#059669', backgroundColor: '#ECFDF5', padding: '3px 8px', borderRadius: 6, border: '1px solid #A7F3D0' }}>
+                          ✓ Full Access across all hotels
+                        </span>
+                      ) : userPropIds.length === 0 ? (
+                        <span style={{ fontSize: '0.78rem', color: '#DC2626', backgroundColor: '#FEE2E2', padding: '3px 8px', borderRadius: 6, fontWeight: 500 }}>
+                          ⚠ No properties assigned (Cannot view data)
+                        </span>
+                      ) : (
+                        assignedPropNames.map((name, i) => (
+                          <span key={i} style={{ fontSize: '0.78rem', color: '#1E40AF', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '3px 8px', borderRadius: 6, fontWeight: 500 }}>
+                            🏨 {name}
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <button 
+                      onClick={() => handleOpenEdit(u)}
+                      title="Edit user details and property permissions"
+                      style={{ color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', marginRight: 8, fontSize: '0.8rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    >
+                      <Edit2 size={13} /> Edit Access
+                    </button>
+                    {!isRoot && (
+                      <button 
+                        onClick={() => handleDelete(u)}
+                        title="Delete user"
+                        style={{ color: '#EF4444', backgroundColor: '#FEE2E2', border: '1px solid #FECACA', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center' }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Add / Edit User Modal */}
+      {showModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(17, 24, 39, 0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ backgroundColor: 'white', width: '100%', maxWidth: 540, borderRadius: 16, overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)' }}>
+            
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F9FAFB' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: '#111827' }}>
+                  {isEditing ? `Edit Permissions: @${userForm.username}` : 'Add New Dashboard User'}
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
+                  Configure credentials and property visibility.
+                </p>
+              </div>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} style={{ padding: 24, maxHeight: '80vh', overflowY: 'auto' }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                    Full Name
+                  </label>
+                  <input 
+                    type="text" 
+                    value={userForm.name} 
+                    onChange={e => setUserForm({ ...userForm, name: e.target.value })}
+                    placeholder="e.g. Rahul Sharma"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                    required 
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                    Role
+                  </label>
+                  <select 
+                    value={userForm.role}
+                    onChange={e => setUserForm({ ...userForm, role: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                  >
+                    <option value="staff">Staff Member</option>
+                    <option value="manager">Hotel Manager</option>
+                    <option value="superadmin">Super Admin (All Access)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                    Username {isEditing && '(Fixed)'}
+                  </label>
+                  <input 
+                    type="text" 
+                    disabled={isEditing}
+                    value={userForm.username} 
+                    onChange={e => setUserForm({ ...userForm, username: e.target.value })}
+                    placeholder="e.g. rahul_viceroy"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.9rem', boxSizing: 'border-box', backgroundColor: isEditing ? '#F3F4F6' : 'white' }}
+                    required 
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                    {isEditing ? 'New Password (Leave blank to keep)' : 'Password'}
+                  </label>
+                  <input 
+                    type="password" 
+                    value={userForm.password} 
+                    onChange={e => setUserForm({ ...userForm, password: e.target.value })}
+                    placeholder={isEditing ? '••••••••' : 'Enter password'}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                    required={!isEditing}
+                  />
+                </div>
+              </div>
+
+              {/* Property Permission Assignment */}
+              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: 18, marginBottom: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#111827' }}>
+                      Allowed Property Access
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
+                      Select which properties this user can view and manage on their dashboard.
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button 
+                      type="button" 
+                      onClick={handleSelectAllProperties}
+                      style={{ fontSize: '0.75rem', color: '#2563EB', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      Select All
+                    </button>
+                    <span style={{ color: '#CBD5E1' }}>|</span>
+                    <button 
+                      type="button" 
+                      onClick={handleClearAllProperties}
+                      style={{ fontSize: '0.75rem', color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                {userForm.role === 'superadmin' ? (
+                  <div style={{ padding: '12px', borderRadius: 8, backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', fontSize: '0.82rem', color: '#065F46', fontWeight: 500 }}>
+                    Super Admins automatically have unrestricted access to all current and future properties.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {properties.map(p => {
+                      const isChecked = (userForm.allowedProperties || []).includes(p.id);
+                      return (
+                        <label 
+                          key={p.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '10px 14px',
+                            borderRadius: 8,
+                            backgroundColor: isChecked ? '#EFF6FF' : 'white',
+                            border: isChecked ? '1.5px solid #3B82F6' : '1px solid #E2E8F0',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <input 
+                              type="checkbox" 
+                              checked={isChecked}
+                              onChange={() => togglePropertyPermission(p.id)}
+                              style={{ width: 17, height: 17, accentColor: '#1E40AF', cursor: 'pointer' }}
+                            />
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#111827' }}>{p.name}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>{p.location}</div>
+                            </div>
+                          </div>
+                          {isChecked && (
+                            <span style={{ fontSize: '0.75rem', color: '#2563EB', fontWeight: 700 }}>
+                              Granted
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                <button 
+                  type="button" 
+                  onClick={() => setShowModal(false)}
+                  style={{ padding: '10px 18px', borderRadius: 8, border: '1px solid #D1D5DB', backgroundColor: 'white', color: '#4B5563', fontWeight: 500, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  style={{ padding: '10px 22px', borderRadius: 8, border: 'none', backgroundColor: '#0A192F', color: 'white', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  {isEditing ? 'Save Changes' : 'Create User'}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
