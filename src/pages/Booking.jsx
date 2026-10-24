@@ -346,27 +346,30 @@ export default function Booking() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', fontFamily: 'Inter, sans-serif' }}>
       {/* Header */}
-      <header className="header" style={{ backgroundColor: 'white', borderBottom: '1px solid #E5E7EB' }}>
-        <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: '#4B5563', fontWeight: 500 }}>
-            <ArrowLeft size={20} /> <span className="hide-on-mobile">Back</span>
-          </button>
-          <h1 className="booking-header-title" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0, lineHeight: 1.2 }}>
-            {property.name}
-            <span className="hide-on-mobile"> - Reservation</span>
-          </h1>
-        </div>
-        <div className="header-right" style={{ display: 'flex', alignItems: 'center' }}>
-          <img src="/logo_dark.png" alt="Sabharwal Hospitality" className="brand-logo" />
+      <header style={{ backgroundColor: 'white', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, zIndex: 40, boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: '#4B5563', fontWeight: 500, fontSize: '0.95rem' }}>
+              <ArrowLeft size={18} /> <span className="hide-on-mobile">Back</span>
+            </button>
+            <div style={{ width: 1, height: 24, backgroundColor: '#E5E7EB' }} className="hide-on-mobile" />
+            <h1 className="booking-header-title" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0, lineHeight: 1.2 }}>
+              {property.name}
+              <span className="hide-on-mobile" style={{ color: '#6B7280', fontWeight: 500, fontSize: '1.05rem' }}> — Room Reservation</span>
+            </h1>
+          </div>
+          <div className="header-right" style={{ display: 'flex', alignItems: 'center' }}>
+            <img src="/logo_dark.png" alt="Sabharwal Hospitality" style={{ height: 48, width: 'auto', objectFit: 'contain' }} />
+          </div>
         </div>
       </header>
 
-      <main className="booking-main-layout" style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 20px', display: 'grid', gridTemplateColumns: '1fr 380px', gap: 32 }}>
+      <main className="booking-main-layout" style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px 60px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 380px', gap: 32, alignItems: 'start' }}>
         
         {/* Left Column: Search & Rooms */}
-        <div>
+        <div style={{ minWidth: 0 }}>
           {/* Top Search Bar */}
-          <div className="booking-search-form" style={{ backgroundColor: 'white', padding: 24, borderRadius: 16, border: '1px solid #E5E7EB', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 16, alignItems: 'end', marginBottom: 40, boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+          <div className="booking-search-form" style={{ backgroundColor: 'white', padding: 24, borderRadius: 16, border: '1px solid #E5E7EB', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 16, alignItems: 'end', marginBottom: 28, boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ gridColumn: 'span 2' }}>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4B5563', marginBottom: 8 }}>Check-in</label>
               <div style={{ display: 'flex', alignItems: 'center', height: 48, padding: '0 16px', border: '1px solid #D1D5DB', borderRadius: 8, backgroundColor: '#F9FAFB' }}>
@@ -405,24 +408,25 @@ export default function Booking() {
           </div>
 
           {/* Filter Bar: Stay Duration & AC / Non-AC */}
-          <div style={{ backgroundColor: 'white', padding: '18px 24px', borderRadius: 16, border: '1px solid #E5E7EB', marginBottom: 24, boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ backgroundColor: 'white', padding: '16px 20px', borderRadius: 16, border: '1px solid #E5E7EB', marginBottom: 28, boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center' }}>
               
               {/* Duration filter */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 280px' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6B7280', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Clock size={14} color="#0A192F" /> Stay Duration
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6B7280', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+                  <Clock size={14} color="#0A192F" /> Stay Duration:
                 </span>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap' }}>
                   <button
                     type="button"
                     onClick={() => setDurationFilter('all')}
                     style={{
-                      padding: '8px 16px',
+                      padding: '7px 14px',
                       borderRadius: 20,
-                      fontSize: '0.85rem',
+                      fontSize: '0.82rem',
                       fontWeight: 600,
                       cursor: 'pointer',
+                      whiteSpace: 'nowrap',
                       border: durationFilter === 'all' ? '1.5px solid #0A192F' : '1px solid #D1D5DB',
                       backgroundColor: durationFilter === 'all' ? '#0A192F' : '#F9FAFB',
                       color: durationFilter === 'all' ? '#FFFFFF' : '#374151',
@@ -435,11 +439,12 @@ export default function Booking() {
                     type="button"
                     onClick={() => setDurationFilter('24h')}
                     style={{
-                      padding: '8px 16px',
+                      padding: '7px 14px',
                       borderRadius: 20,
-                      fontSize: '0.85rem',
+                      fontSize: '0.82rem',
                       fontWeight: 600,
                       cursor: 'pointer',
+                      whiteSpace: 'nowrap',
                       border: durationFilter === '24h' ? '1.5px solid #0A192F' : '1px solid #D1D5DB',
                       backgroundColor: durationFilter === '24h' ? '#0A192F' : '#F9FAFB',
                       color: durationFilter === '24h' ? '#FFFFFF' : '#374151',
@@ -452,11 +457,12 @@ export default function Booking() {
                     type="button"
                     onClick={() => setDurationFilter('12h')}
                     style={{
-                      padding: '8px 16px',
+                      padding: '7px 14px',
                       borderRadius: 20,
-                      fontSize: '0.85rem',
+                      fontSize: '0.82rem',
                       fontWeight: 600,
                       cursor: 'pointer',
+                      whiteSpace: 'nowrap',
                       border: durationFilter === '12h' ? '1.5px solid #0A192F' : '1px solid #D1D5DB',
                       backgroundColor: durationFilter === '12h' ? '#0A192F' : '#F9FAFB',
                       color: durationFilter === '12h' ? '#FFFFFF' : '#374151',
@@ -468,21 +474,25 @@ export default function Booking() {
                 </div>
               </div>
 
+              {/* Vertical divider */}
+              <div style={{ width: 1, height: 28, backgroundColor: '#E5E7EB', display: 'none' }} className="filter-divider" />
+
               {/* AC / Non-AC filter */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 280px' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6B7280', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Wind size={14} color="#0A192F" /> Room Type
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6B7280', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+                  <Wind size={14} color="#0A192F" /> Room Type:
                 </span>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap' }}>
                   <button
                     type="button"
                     onClick={() => setAcFilter('all')}
                     style={{
-                      padding: '8px 16px',
+                      padding: '7px 14px',
                       borderRadius: 20,
-                      fontSize: '0.85rem',
+                      fontSize: '0.82rem',
                       fontWeight: 600,
                       cursor: 'pointer',
+                      whiteSpace: 'nowrap',
                       border: acFilter === 'all' ? '1.5px solid #0A192F' : '1px solid #D1D5DB',
                       backgroundColor: acFilter === 'all' ? '#0A192F' : '#F9FAFB',
                       color: acFilter === 'all' ? '#FFFFFF' : '#374151',
@@ -495,11 +505,12 @@ export default function Booking() {
                     type="button"
                     onClick={() => setAcFilter('ac')}
                     style={{
-                      padding: '8px 16px',
+                      padding: '7px 14px',
                       borderRadius: 20,
-                      fontSize: '0.85rem',
+                      fontSize: '0.82rem',
                       fontWeight: 600,
                       cursor: 'pointer',
+                      whiteSpace: 'nowrap',
                       border: acFilter === 'ac' ? '1.5px solid #0A192F' : '1px solid #D1D5DB',
                       backgroundColor: acFilter === 'ac' ? '#0A192F' : '#F9FAFB',
                       color: acFilter === 'ac' ? '#FFFFFF' : '#374151',
@@ -512,11 +523,12 @@ export default function Booking() {
                     type="button"
                     onClick={() => setAcFilter('non-ac')}
                     style={{
-                      padding: '8px 16px',
+                      padding: '7px 14px',
                       borderRadius: 20,
-                      fontSize: '0.85rem',
+                      fontSize: '0.82rem',
                       fontWeight: 600,
                       cursor: 'pointer',
+                      whiteSpace: 'nowrap',
                       border: acFilter === 'non-ac' ? '1.5px solid #0A192F' : '1px solid #D1D5DB',
                       backgroundColor: acFilter === 'non-ac' ? '#0A192F' : '#F9FAFB',
                       color: acFilter === 'non-ac' ? '#FFFFFF' : '#374151',
