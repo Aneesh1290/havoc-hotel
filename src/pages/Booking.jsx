@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import { useHotels } from '../context/HotelContext';
-import { Calendar as CalendarIcon, Users, ArrowLeft, CheckCircle, X, Plus, Minus, Lock, User, Eye, EyeOff, AlertCircle, Clock, Wind, Flame, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, ArrowLeft, CheckCircle, X, Plus, Minus, Lock, User, Eye, EyeOff, AlertCircle, Clock, Wind, Flame, Sparkles, CreditCard, ShieldCheck, Tag, Info, Building } from 'lucide-react';
 import { format, parseISO, differenceInDays, areIntervalsOverlapping, isSameDay } from 'date-fns';
 import Footer from '../components/Footer';
 
@@ -101,8 +101,15 @@ export default function Booking() {
     password: ''
   });
 
-  // Final form state
-  const [showFinalForm, setShowFinalForm] = useState(false);
+  // Checkout View State: 'select_rooms' | 'checkout'
+  const [checkoutStep, setCheckoutStep] = useState('select_rooms');
+  const [paymentMethod, setPaymentMethod] = useState('online'); // 'online' | 'pay_at_desk'
+  const [couponCode, setCouponCode] = useState('');
+  const [couponApplied, setCouponApplied] = useState(false);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponMessage, setCouponMessage] = useState('');
+
+  // Final confirmation state
   const [confirmedBookingData, setConfirmedBookingData] = useState(null);
   const [formData, setFormData] = useState(() => {
     try {
@@ -119,6 +126,25 @@ export default function Booking() {
     } catch (e) {}
     return { name: '', phone: '', email: '', description: '' };
   });
+
+  const handleApplyCoupon = (e) => {
+    e.preventDefault();
+    if (!couponCode.trim()) return;
+    const code = couponCode.trim().toUpperCase();
+    if (code === 'SABHARWAL10' || code === 'WELCOME10') {
+      setCouponApplied(true);
+      setCouponDiscount(0.10);
+      setCouponMessage('Coupon applied! 10% discount added.');
+    } else if (code === 'FESTIVE15') {
+      setCouponApplied(true);
+      setCouponDiscount(0.15);
+      setCouponMessage('Festive offer applied! 15% discount added.');
+    } else {
+      setCouponApplied(false);
+      setCouponDiscount(0);
+      setCouponMessage('Invalid coupon code. Try WELCOME10');
+    }
+  };
 
   const handleRegisterFromBooking = async (e) => {
     e.preventDefault();
@@ -162,7 +188,8 @@ export default function Booking() {
         phone: savedUser.phone || ''
       }));
       setShowAuthModal(false);
-      setShowFinalForm(true);
+      setCheckoutStep('checkout');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       // Offline fallback
       const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
@@ -182,7 +209,8 @@ export default function Booking() {
         phone: profile.phone || ''
       }));
       setShowAuthModal(false);
-      setShowFinalForm(true);
+      setCheckoutStep('checkout');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setAuthLoading(false);
     }
@@ -212,7 +240,8 @@ export default function Booking() {
           phone: data.user.phone || ''
         }));
         setShowAuthModal(false);
-        setShowFinalForm(true);
+        setCheckoutStep('checkout');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         setAuthLoading(false);
         return;
       } else {
@@ -234,7 +263,8 @@ export default function Booking() {
           phone: user.phone || ''
         }));
         setShowAuthModal(false);
-        setShowFinalForm(true);
+        setCheckoutStep('checkout');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         setAuthLoading(false);
         return;
       }
@@ -265,8 +295,10 @@ export default function Booking() {
 
   const nights = differenceInDays(checkOut, checkIn) || 1;
   const subtotal = propertyRooms.reduce((sum, r) => sum + (selectedRooms[r.id] || 0) * r.pricePerNight * nights, 0);
-  const taxes = subtotal * (taxRate / 100);
-  const totalPrice = subtotal + taxes;
+  const discountAmount = Math.round(subtotal * couponDiscount);
+  const discountedSubtotal = Math.max(0, subtotal - discountAmount);
+  const taxes = Math.round(discountedSubtotal * (taxRate / 100));
+  const totalPrice = discountedSubtotal + taxes;
 
   const totalSelectedCapacity = propertyRooms.reduce((sum, r) => sum + (selectedRooms[r.id] || 0) * r.capacity, 0);
   const canContinue = totalSelectedCount > 0 && 
@@ -297,7 +329,9 @@ export default function Booking() {
       return;
     }
 
-    setShowFinalForm(true);
+    // Transition smoothly to full dedicated checkout page
+    setCheckoutStep('checkout');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleConfirmBooking = (e) => {
@@ -308,7 +342,7 @@ export default function Booking() {
     Object.entries(selectedRooms).forEach(([roomId, count]) => {
       if (count > 0) {
         const room = propertyRooms.find(r => r.id === roomId);
-        summaryRooms.push({ name: room.name, count, price: room.pricePerNight });
+        summaryRooms.push({ name: room.name, count, price: room.pricePerNight, image: room.images?.[0] });
         addBooking({
           name: formData.name,
           email: formData.email,
@@ -317,8 +351,9 @@ export default function Booking() {
           hotelName: property.name,
           checkIn: checkIn.toISOString(),
           checkOut: checkOut.toISOString(),
-          amount: Math.round(room.pricePerNight * nights * count * (1 + taxRate / 100)),
-          status: 'Confirmed',
+          amount: Math.round(room.pricePerNight * nights * count * (1 + taxRate / 100) * (1 - couponDiscount)),
+          status: paymentMethod === 'online' ? 'Confirmed' : 'Confirmed (Pay at Desk)',
+          paymentMethod: paymentMethod === 'online' ? 'Online Gateway' : 'Pay at Desk',
           rooms: count,
           roomId: room.id,
           adults: parseInt(guests.adults) || 1,
@@ -328,7 +363,6 @@ export default function Booking() {
       }
     });
 
-    setShowFinalForm(false);
     setConfirmedBookingData({
       bookingId: 'SBH-' + Math.floor(100000 + Math.random() * 900000),
       guestName: formData.name,
@@ -339,9 +373,547 @@ export default function Booking() {
       checkOut,
       nights,
       rooms: summaryRooms,
-      totalAmount: totalPrice
+      totalAmount: totalPrice,
+      paymentMethod
     });
   };
+
+  if (checkoutStep === 'checkout') {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#0B0F17', color: '#E2E8F0', fontFamily: 'Inter, sans-serif' }}>
+        {/* Top Dark Header matching reference */}
+        <header style={{ backgroundColor: '#0F172A', borderBottom: '1px solid #1E293B', position: 'sticky', top: 0, zIndex: 40 }}>
+          <div style={{ maxWidth: 1240, margin: '0 auto', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #334155' }}>
+                <Building size={20} color="#38BDF8" />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, letterSpacing: '0.08em', color: '#F8FAFC', textTransform: 'uppercase' }}>
+                  {property.name}
+                </div>
+                <div style={{ fontSize: '0.7rem', color: '#94A3B8', letterSpacing: '0.04em' }}>
+                  A Unit of Sabharwal Hospitality Group
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: '1rem', fontWeight: 800, letterSpacing: '0.25em', color: '#94A3B8', textTransform: 'uppercase' }}>
+              CHECKOUT
+            </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => setCheckoutStep('select_rooms')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  color: '#94A3B8',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  transition: 'color 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = '#F8FAFC'}
+                onMouseLeave={e => e.currentTarget.style.color = '#94A3B8'}
+              >
+                <ArrowLeft size={16} /> Back to Rooms
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* 2-Column Dark Layout */}
+        <main style={{ maxWidth: 1240, margin: '0 auto', padding: '40px 24px 80px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) 440px', gap: 40, alignItems: 'start' }}>
+            
+            {/* Left Column: Guest Details & Payment Selection */}
+            <div>
+              <form id="checkoutForm" onSubmit={handleConfirmBooking}>
+                
+                {/* 1. Your Details Card */}
+                <div style={{ backgroundColor: '#131C2E', borderRadius: 16, border: '1px solid #1E293B', padding: '32px', marginBottom: 28, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
+                  <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#F8FAFC', margin: '0 0 24px 0', letterSpacing: '0.01em' }}>
+                    Your Details
+                  </h2>
+
+                  <div style={{ marginBottom: 22 }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                      FULL NAME *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={e => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="e.g. John Doe"
+                      style={{
+                        width: '100%',
+                        padding: '14px 18px',
+                        backgroundColor: '#1E293B',
+                        border: '1px solid #334155',
+                        borderRadius: 10,
+                        color: '#F8FAFC',
+                        fontSize: '0.95rem',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      onFocus={e => e.target.style.borderColor = '#38BDF8'}
+                      onBlur={e => e.target.style.borderColor = '#334155'}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: 22 }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                      EMAIL ADDRESS *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={e => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="e.g. john@example.com"
+                      style={{
+                        width: '100%',
+                        padding: '14px 18px',
+                        backgroundColor: '#1E293B',
+                        border: '1px solid #334155',
+                        borderRadius: 10,
+                        color: '#F8FAFC',
+                        fontSize: '0.95rem',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      onFocus={e => e.target.style.borderColor = '#38BDF8'}
+                      onBlur={e => e.target.style.borderColor = '#334155'}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: 22 }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                      PHONE NUMBER *
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 12 }}>
+                      <select
+                        style={{
+                          backgroundColor: '#1E293B',
+                          border: '1px solid #334155',
+                          borderRadius: 10,
+                          color: '#F8FAFC',
+                          padding: '14px 12px',
+                          fontSize: '0.9rem',
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="+91">IN +91</option>
+                        <option value="+1">US +1</option>
+                        <option value="+44">UK +44</option>
+                        <option value="+971">UAE +971</option>
+                      </select>
+                      <input
+                        type="tel"
+                        required
+                        value={formData.phone}
+                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="e.g. 98765 43210"
+                        style={{
+                          width: '100%',
+                          padding: '14px 18px',
+                          backgroundColor: '#1E293B',
+                          border: '1px solid #334155',
+                          borderRadius: 10,
+                          color: '#F8FAFC',
+                          fontSize: '0.95rem',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                        onFocus={e => e.target.style.borderColor = '#38BDF8'}
+                        onBlur={e => e.target.style.borderColor = '#334155'}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                      SPECIAL REQUESTS (OPTIONAL)
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={formData.description}
+                      onChange={e => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Any specific requests, floor preference, or estimated arrival time..."
+                      style={{
+                        width: '100%',
+                        padding: '14px 18px',
+                        backgroundColor: '#1E293B',
+                        border: '1px solid #334155',
+                        borderRadius: 10,
+                        color: '#F8FAFC',
+                        fontSize: '0.95rem',
+                        outline: 'none',
+                        resize: 'vertical',
+                        boxSizing: 'border-box'
+                      }}
+                      onFocus={e => e.target.style.borderColor = '#38BDF8'}
+                      onBlur={e => e.target.style.borderColor = '#334155'}
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Payment Selection Card */}
+                <div style={{ backgroundColor: '#131C2E', borderRadius: 16, border: '1px solid #1E293B', padding: '32px', marginBottom: 28, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
+                  <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#F8FAFC', margin: '0 0 24px 0', letterSpacing: '0.01em' }}>
+                    Payment
+                  </h2>
+
+                  {/* Option 1: Pay Online */}
+                  <div
+                    onClick={() => setPaymentMethod('online')}
+                    style={{
+                      border: paymentMethod === 'online' ? '1.5px solid #F59E0B' : '1px solid #334155',
+                      backgroundColor: paymentMethod === 'online' ? '#1E293B' : '#0F172A',
+                      borderRadius: 12,
+                      padding: '18px 20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 16,
+                      cursor: 'pointer',
+                      marginBottom: 16,
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      checked={paymentMethod === 'online'}
+                      onChange={() => setPaymentMethod('online')}
+                      style={{ width: 18, height: 18, accentColor: '#F59E0B', cursor: 'pointer' }}
+                    />
+                    <CreditCard size={22} color={paymentMethod === 'online' ? '#F59E0B' : '#94A3B8'} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.98rem', color: '#F8FAFC' }}>
+                        Pay Online (Cards, UPI, Netbanking)
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: 2 }}>
+                        Pay securely via ICICI & Razorpay Payment Gateway
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Option 2: Pay at Desk */}
+                  <div
+                    onClick={() => setPaymentMethod('pay_at_desk')}
+                    style={{
+                      border: paymentMethod === 'pay_at_desk' ? '1.5px solid #F59E0B' : '1px solid #334155',
+                      backgroundColor: paymentMethod === 'pay_at_desk' ? '#1E293B' : '#0F172A',
+                      borderRadius: 12,
+                      padding: '18px 20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 16,
+                      cursor: 'pointer',
+                      marginBottom: 24,
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      checked={paymentMethod === 'pay_at_desk'}
+                      onChange={() => setPaymentMethod('pay_at_desk')}
+                      style={{ width: 18, height: 18, accentColor: '#F59E0B', cursor: 'pointer' }}
+                    />
+                    <Building size={22} color={paymentMethod === 'pay_at_desk' ? '#F59E0B' : '#94A3B8'} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.98rem', color: '#F8FAFC' }}>
+                        Pay at Desk
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: 2 }}>
+                        Book now and pay with cash/card when you arrive
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Legal Checkbox */}
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, fontSize: '0.85rem', color: '#CBD5E1', cursor: 'pointer', userSelect: 'none' }}>
+                    <input type="checkbox" required style={{ width: 18, height: 18, marginTop: 2, accentColor: '#F59E0B', cursor: 'pointer' }} />
+                    <span>
+                      I agree to the <a href="/terms" target="_blank" rel="noreferrer" style={{ color: '#38BDF8', textDecoration: 'none' }}>Terms & Conditions</a> and <a href="/cancellation" target="_blank" rel="noreferrer" style={{ color: '#38BDF8', textDecoration: 'none' }}>Refund & Cancellation Policy</a>
+                    </span>
+                  </label>
+                </div>
+              </form>
+            </div>
+
+            {/* Right Column: Order Summary Card */}
+            <div>
+              <div style={{ backgroundColor: '#131C2E', borderRadius: 16, border: '1px solid #1E293B', padding: '28px', position: 'sticky', top: 100, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#F8FAFC', margin: '0 0 20px 0' }}>
+                  Order Summary
+                </h2>
+
+                {/* Selected Rooms List */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24, borderBottom: '1px solid #1E293B', paddingBottom: 20 }}>
+                  {Object.entries(selectedRooms).map(([roomId, count]) => {
+                    if (count <= 0) return null;
+                    const room = propertyRooms.find(r => r.id === roomId);
+                    if (!room) return null;
+                    const itemTotal = room.pricePerNight * count * nights;
+                    return (
+                      <div key={roomId} style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                        <img
+                          src={room.images?.[0] || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=400&q=80'}
+                          alt={room.name}
+                          style={{ width: 68, height: 68, borderRadius: 10, objectFit: 'cover', border: '1px solid #334155' }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#F8FAFC', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {room.name} {count > 1 ? `(${count} Rooms)` : ''}
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: '#94A3B8', marginTop: 4 }}>
+                            {format(checkIn, 'MMM dd')} - {format(checkOut, 'MMM dd')} ({nights} Night{nights > 1 ? 's' : ''})
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#38BDF8', marginTop: 2 }}>
+                            Slot: 24-hr check-in guaranteed
+                          </div>
+                        </div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#F8FAFC', whiteSpace: 'nowrap' }}>
+                          ₹{itemTotal.toLocaleString()}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Coupon Code Block */}
+                <div style={{ backgroundColor: '#0F172A', borderRadius: 12, border: '1px solid #1E293B', padding: '16px', marginBottom: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', fontWeight: 800, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
+                    <Tag size={14} /> HAVE A COUPON CODE?
+                  </div>
+                  <form onSubmit={handleApplyCoupon} style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      type="text"
+                      placeholder="ENTER COUPON CODE"
+                      value={couponCode}
+                      onChange={e => setCouponCode(e.target.value)}
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#1E293B',
+                        border: '1px solid #334155',
+                        borderRadius: 8,
+                        color: '#F8FAFC',
+                        padding: '10px 14px',
+                        fontSize: '0.85rem',
+                        textTransform: 'uppercase',
+                        outline: 'none'
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      style={{
+                        backgroundColor: '#F59E0B',
+                        color: '#0F172A',
+                        border: 'none',
+                        borderRadius: 8,
+                        padding: '0 18px',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        transition: 'opacity 0.2s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+                      onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                    >
+                      Apply
+                    </button>
+                  </form>
+                  {couponMessage && (
+                    <div style={{ fontSize: '0.75rem', marginTop: 8, color: couponApplied ? '#10B981' : '#F87171' }}>
+                      {couponMessage}
+                    </div>
+                  )}
+                </div>
+
+                {/* Price Breakdown */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24, fontSize: '0.9rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
+                    <span>Subtotal</span>
+                    <span style={{ color: '#F8FAFC' }}>₹{subtotal.toLocaleString()}</span>
+                  </div>
+
+                  {couponDiscount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10B981' }}>
+                      <span>Discount ({couponDiscount * 100}%)</span>
+                      <span>-₹{discountAmount.toLocaleString()}</span>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
+                    <span>Booking Fee</span>
+                    <span style={{ color: '#10B981', fontWeight: 600 }}>Free</span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
+                    <span>GST ({taxRate}%)</span>
+                    <span style={{ color: '#F8FAFC' }}>₹{taxes.toLocaleString()}</span>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid #1E293B', paddingTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#F8FAFC' }}>Total</span>
+                    <span style={{ fontSize: '1.45rem', fontWeight: 800, color: '#F8FAFC' }}>₹{totalPrice.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {/* Confirm & Submit Button */}
+                <button
+                  type="submit"
+                  form="checkoutForm"
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    borderRadius: 10,
+                    border: 'none',
+                    backgroundColor: '#F59E0B',
+                    color: '#0F172A',
+                    fontWeight: 800,
+                    fontSize: '1rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    marginBottom: 20,
+                    transition: 'all 0.2s',
+                    boxShadow: '0 4px 14px rgba(245, 158, 11, 0.3)'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#D97706'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#F59E0B'}
+                >
+                  <Lock size={18} /> Confirm Reservation — ₹{totalPrice.toLocaleString()}
+                </button>
+
+                {/* Payment Methods Badges Footer */}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                    Supported Payment Methods
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', backgroundColor: '#FFFFFF', borderRadius: 4, color: '#1A1F71' }}>VISA</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', backgroundColor: '#FFFFFF', borderRadius: 4, color: '#EB001B' }}>Mastercard</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', backgroundColor: '#FFFFFF', borderRadius: 4, color: '#097939' }}>RuPay</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', backgroundColor: '#FFFFFF', borderRadius: 4, color: '#5F259F' }}>UPI</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </main>
+
+        {/* Confirmation Modal */}
+        {confirmedBookingData && (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.85)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div style={{ backgroundColor: '#131C2E', border: '1px solid #1E293B', width: '100%', maxWidth: 520, borderRadius: 20, overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+              
+              <div style={{ backgroundColor: '#0F172A', color: 'white', padding: '32px 24px', textAlign: 'center', borderBottom: '1px solid #1E293B' }}>
+                <div style={{ width: 64, height: 64, borderRadius: '50%', backgroundColor: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 8px 16px rgba(16, 185, 129, 0.3)' }}>
+                  <CheckCircle size={36} color="white" />
+                </div>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: 700, margin: '0 0 6px', color: '#F8FAFC' }}>Reservation Confirmed</h2>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#94A3B8' }}>
+                  Confirmation sent to <strong style={{ color: '#F8FAFC' }}>{confirmedBookingData.guestEmail}</strong>
+                </p>
+              </div>
+
+              <div style={{ padding: 28 }}>
+                <div style={{ backgroundColor: '#0B0F17', border: '1px solid #1E293B', borderRadius: 12, padding: 18, marginBottom: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1E293B', paddingBottom: 12, marginBottom: 12 }}>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 600 }}>Booking ID</span>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#F59E0B', marginTop: 2 }}>{confirmedBookingData.bookingId}</div>
+                    </div>
+                    <span style={{ backgroundColor: '#064E3B', color: '#34D399', fontSize: '0.8rem', fontWeight: 700, padding: '4px 10px', borderRadius: 20, border: '1px solid #059669' }}>
+                      {confirmedBookingData.paymentMethod === 'online' ? 'Online Paid' : 'Pay at Desk'}
+                    </span>
+                  </div>
+
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontWeight: 700, color: '#F8FAFC', fontSize: '1.05rem', marginBottom: 2 }}>{confirmedBookingData.hotelName}</div>
+                    <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>{confirmedBookingData.hotelLocation}</div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, borderTop: '1px solid #1E293B', paddingTop: 12, marginBottom: 12 }}>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500, display: 'block' }}>Check-in</span>
+                      <strong style={{ fontSize: '0.9rem', color: '#E2E8F0' }}>{format(confirmedBookingData.checkIn, 'EEE, dd MMM yyyy')}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500, display: 'block' }}>Check-out</span>
+                      <strong style={{ fontSize: '0.9rem', color: '#E2E8F0' }}>{format(confirmedBookingData.checkOut, 'EEE, dd MMM yyyy')}</strong>
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid #1E293B', paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.9rem', color: '#94A3B8' }}>
+                      Total ({confirmedBookingData.nights} Night{confirmedBookingData.nights > 1 ? 's' : ''}, Taxes incl.)
+                    </span>
+                    <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#F8FAFC' }}>
+                      ₹{confirmedBookingData.totalAmount.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/guest')}
+                    style={{
+                      flex: 1,
+                      padding: '14px',
+                      borderRadius: 10,
+                      backgroundColor: '#F59E0B',
+                      color: '#0F172A',
+                      border: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Go to Guest Panel →
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/')}
+                    style={{
+                      padding: '14px 20px',
+                      borderRadius: 10,
+                      backgroundColor: '#1E293B',
+                      color: '#E2E8F0',
+                      border: '1px solid #334155',
+                      fontWeight: 600,
+                      fontSize: '0.95rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Home
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', fontFamily: 'Inter, sans-serif' }}>
@@ -1003,67 +1575,7 @@ export default function Booking() {
         </div>
       )}
 
-      {/* Final Guest Details Modal */}
-      {showFinalForm && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(17, 24, 39, 0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ backgroundColor: 'white', width: '100%', maxWidth: 500, borderRadius: 16, overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-            <div style={{ padding: '24px 32px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'Playfair Display, serif', margin: 0 }}>Guest Details</h2>
-                {localStorage.getItem('guestProfile') && (
-                  <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#059669', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <CheckCircle size={14} /> Auto-filled from your logged in account
-                  </p>
-                )}
-              </div>
-              <button onClick={() => setShowFinalForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280' }}><X size={24} /></button>
-            </div>
-            
-            <form onSubmit={handleConfirmBooking} style={{ padding: 32 }}>
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4B5563', marginBottom: 8 }}>Full Name *</label>
-                <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: 8 }} placeholder="John Doe" />
-              </div>
-              
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4B5563', marginBottom: 8 }}>Email Address *</label>
-                <input type="email" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: 8 }} placeholder="john@example.com" />
-              </div>
-              
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4B5563', marginBottom: 8 }}>Phone Number</label>
-                <input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: 8 }} placeholder="+91 98765 43210" />
-              </div>
-              
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4B5563', marginBottom: 8 }}>Special Requests</label>
-                <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: 8, minHeight: 70, resize: 'vertical' }} placeholder="Any special requirements..." />
-              </div>
 
-              {/* Legal Policies Consent Checkboxes for Bank & Regulatory Compliance */}
-              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: '14px', marginBottom: 20 }}>
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.82rem', color: '#334155', cursor: 'pointer', marginBottom: 10 }}>
-                  <input type="checkbox" required style={{ marginTop: 3 }} />
-                  <span>
-                    I accept the <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#2563EB', fontWeight: 600 }}>Terms & Conditions</a> and <a href="/cancellation" target="_blank" rel="noopener noreferrer" style={{ color: '#2563EB', fontWeight: 600 }}>Cancellation & Refund Policy</a>.
-                  </span>
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.82rem', color: '#334155', cursor: 'pointer' }}>
-                  <input type="checkbox" required style={{ marginTop: 3 }} />
-                  <span>
-                    I agree to the <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#2563EB', fontWeight: 600 }}>Privacy Policy</a> and confirm that all adult guests will carry original government-issued photo ID at check-in.
-                  </span>
-                </label>
-              </div>
-
-              <button type="submit" style={{ width: '100%', padding: 16, borderRadius: 8, backgroundColor: 'var(--primary)', color: 'white', border: 'none', fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <CheckCircle size={20} /> Confirm & Pay — ₹{totalPrice.toLocaleString()}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Luxury Booking Confirmation Modal */}
       {confirmedBookingData && (
