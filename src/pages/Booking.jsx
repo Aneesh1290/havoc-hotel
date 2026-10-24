@@ -1321,15 +1321,7 @@ export default function Booking() {
               )}
             </div>
             
-            <hr style={{ border: 'none', borderTop: '1px solid #D1D5DB', marginBottom: 24 }} />
-            
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', color: '#4B5563', marginBottom: 8 }}>Add promo code</label>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <input type="text" placeholder="Enter code" style={{ flex: 1, padding: '10px 12px', border: '1px solid #D1D5DB', borderRadius: 4 }} />
-                <button style={{ backgroundColor: '#9CA3AF', color: 'white', border: 'none', borderRadius: 4, padding: '0 16px', fontWeight: 600 }}>Apply</button>
-              </div>
-            </div>
+
             
             <hr style={{ border: 'none', borderTop: '1px solid #D1D5DB', marginBottom: 24 }} />
             
