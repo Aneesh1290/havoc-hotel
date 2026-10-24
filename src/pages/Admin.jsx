@@ -201,7 +201,7 @@ export default function Admin() {
           {activeTab === 'properties' && <PropertiesView properties={properties} bookings={bookings} addProperty={addProperty} removeProperty={removeProperty} updateProperty={updateProperty} rooms={rooms} />}
           {activeTab === 'bookings' && <BookingsView bookings={bookings} properties={properties} rooms={rooms} removeBooking={removeBooking} searchQuery={searchQuery} />}
           {activeTab === 'rooms' && <RoomsView properties={properties} rooms={rooms} addRoomType={addRoomType} removeRoomType={removeRoomType} updateRoomType={updateRoomType} />}
-          {activeTab === 'payments' && <PaymentsView bookings={bookings} />}
+          {activeTab === 'payments' && <PaymentsView bookings={bookings} properties={properties} />}
           {activeTab === 'reports' && <ReportsView bookings={bookings} properties={properties} rooms={rooms} inventoryAlerts={inventoryAlerts} />}
           {activeTab === 'offers' && <OffersView />}
           {activeTab === 'settings' && <SettingsView />}
@@ -1534,40 +1534,191 @@ function RoomsView({ properties, rooms, addRoomType, removeRoomType, updateRoomT
 }
 
 
-function PaymentsView({ bookings }) {
+function PaymentsView({ bookings = [], properties = [] }) {
+  const [filterMethod, setFilterMethod] = useState('all');
+  const [filterHotel, setFilterHotel] = useState('all');
+
+  // Compute summary stats
+  const totalReceived = bookings.reduce((sum, b) => {
+    if (b.status === 'Confirmed' || b.status === 'Checked In' || b.status === 'Completed') {
+      return sum + (b.amount || 0);
+    }
+    return sum;
+  }, 0);
+
+  const onlineTransactions = bookings.filter(b => {
+    const m = (b.paymentMethod || '').toLowerCase();
+    return m.includes('online') || m.includes('gateway') || m.includes('card');
+  });
+
+  const deskTransactions = bookings.filter(b => {
+    const m = (b.paymentMethod || '').toLowerCase();
+    return m.includes('desk') || m.includes('cash') || m.includes('arrival');
+  });
+
+  const filteredBookings = bookings.filter(b => {
+    if (filterHotel !== 'all' && b.hotelId !== filterHotel && b.hotelName !== filterHotel) {
+      return false;
+    }
+    if (filterMethod === 'online') {
+      const m = (b.paymentMethod || '').toLowerCase();
+      if (!m.includes('online') && !m.includes('gateway') && !m.includes('card') && m !== '') return false;
+    } else if (filterMethod === 'desk') {
+      const m = (b.paymentMethod || '').toLowerCase();
+      if (!m.includes('desk') && !m.includes('cash') && !m.includes('arrival')) return false;
+    }
+    return true;
+  });
+
+  const getMethodBadge = (b) => {
+    const raw = (b.paymentMethod || '').toLowerCase();
+    const isPayAtDesk = raw.includes('desk') || raw.includes('arrival') || (b.status && b.status.includes('Pay at Desk'));
+    
+    if (isPayAtDesk) {
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, fontSize: '0.8rem', fontWeight: 600, backgroundColor: '#FEF3C7', color: '#92400E', border: '1px solid #FDE68A' }}>
+          <Building2 size={13} /> Pay at Desk
+        </span>
+      );
+    }
+
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, fontSize: '0.8rem', fontWeight: 600, backgroundColor: '#EFF6FF', color: '#1E40AF', border: '1px solid #BFDBFE' }}>
+        <CreditCard size={13} /> Online Gateway (Razorpay/ICICI)
+      </span>
+    );
+  };
+
+  const getStatusBadge = (status) => {
+    const s = status || 'Confirmed';
+    if (s.includes('Cancelled')) {
+      return <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, color: '#DC2626', backgroundColor: '#FEE2E2' }}>Cancelled</span>;
+    }
+    if (s.includes('Pay at Desk')) {
+      return <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, color: '#D97706', backgroundColor: '#FEF3C7' }}>Due on Arrival</span>;
+    }
+    return <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, color: '#059669', backgroundColor: '#ECFDF5' }}>Paid & Confirmed</span>;
+  };
+
   return (
     <>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: '1.8rem', fontWeight: 600, color: '#111827', marginBottom: 4 }}>Payments & Transactions</h1>
-        <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>Track incoming payments and refund requests.</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 28 }}>
+        <div>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#111827', margin: '0 0 4px', fontFamily: 'var(--font-serif)' }}>Payments & Transactions</h1>
+          <p style={{ color: '#6B7280', fontSize: '0.95rem', margin: 0 }}>Review verified transactions, online payment gateway collections, and front-desk dues.</p>
+        </div>
+
+        {/* Filter Toolbar */}
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <select 
+            value={filterHotel} 
+            onChange={e => setFilterHotel(e.target.value)}
+            style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #D1D5DB', backgroundColor: 'white', fontSize: '0.88rem', color: '#111827', fontWeight: 500, outline: 'none' }}
+          >
+            <option value="all">All Hotels</option>
+            {properties.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+
+          <select 
+            value={filterMethod} 
+            onChange={e => setFilterMethod(e.target.value)}
+            style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #D1D5DB', backgroundColor: 'white', fontSize: '0.88rem', color: '#111827', fontWeight: 500, outline: 'none' }}
+          >
+            <option value="all">All Methods</option>
+            <option value="online">Online Gateway</option>
+            <option value="desk">Pay at Desk</option>
+          </select>
+        </div>
       </div>
 
-      <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+      {/* Metrics Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, marginBottom: 28 }}>
+        <div style={{ backgroundColor: 'white', borderRadius: 12, padding: '20px 24px', border: '1px solid #E5E7EB', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Transaction Volume</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#111827', marginTop: 8 }}>₹{totalReceived.toLocaleString()}</div>
+          <div style={{ fontSize: '0.8rem', color: '#059669', marginTop: 4 }}>Across {bookings.length} reservations</div>
+        </div>
+
+        <div style={{ backgroundColor: 'white', borderRadius: 12, padding: '20px 24px', border: '1px solid #E5E7EB', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Online Gateway</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1E40AF', marginTop: 8 }}>{onlineTransactions.length}</div>
+          <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: 4 }}>UPI, Cards & Netbanking</div>
+        </div>
+
+        <div style={{ backgroundColor: 'white', borderRadius: 12, padding: '20px 24px', border: '1px solid #E5E7EB', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Front Desk Collection</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#D97706', marginTop: 8 }}>{deskTransactions.length}</div>
+          <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: 4 }}>Pay upon check-in</div>
+        </div>
+      </div>
+
+      {/* Main Transactions Table */}
+      <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead style={{ backgroundColor: '#F9FAFB' }}>
             <tr>
-              <th style={thStyle}>Date</th>
-              <th style={thStyle}>Guest</th>
+              <th style={thStyle}>Date & Time</th>
+              <th style={thStyle}>Transaction / Order ID</th>
+              <th style={thStyle}>Guest & Hotel</th>
               <th style={thStyle}>Amount</th>
-              <th style={thStyle}>Method</th>
-              <th style={thStyle}>Status</th>
+              <th style={thStyle}>Payment Channel</th>
+              <th style={{ ...thStyle, textAlign: 'right' }}>Status</th>
             </tr>
           </thead>
           <tbody>
-            {bookings.map((b, idx) => (
-              <tr key={b.id} style={{ borderBottom: idx === bookings.length - 1 ? 'none' : '1px solid #E5E7EB' }}>
-                <td style={{ ...tdStyle, color: '#4B5563' }}>{format(parseISO(b.checkIn), 'dd MMM yyyy, HH:mm')}</td>
-                <td style={{ ...tdStyle, fontWeight: 500, color: '#111827' }}>{b.name}</td>
-                <td style={{ ...tdStyle, fontWeight: 600 }}>₹{(b.amount || 0).toLocaleString()}</td>
-                <td style={{ ...tdStyle, color: '#6B7280' }}>Credit Card (ends 4242)</td>
-                <td style={tdStyle}>
-                  <span style={{ padding: '6px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, color: '#10B981', backgroundColor: '#ECFDF5' }}>
-                    Completed
-                  </span>
+            {filteredBookings.map((b, idx) => {
+              let displayDate = '-';
+              if (b.checkIn) {
+                try {
+                  displayDate = format(parseISO(b.checkIn), 'dd MMM yyyy, HH:mm');
+                } catch (e) {
+                  displayDate = b.checkIn;
+                }
+              }
+
+              // Compute clean order reference
+              const orderId = b.id ? (b.id.toString().startsWith('#') ? b.id : `#ORD_${b.id.toString().substring(0, 8)}`) : `#ORD_${idx + 101}`;
+
+              return (
+                <tr key={b.id || idx} style={{ borderBottom: idx === filteredBookings.length - 1 ? 'none' : '1px solid #E5E7EB' }}>
+                  <td style={{ ...tdStyle, color: '#4B5563', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontWeight: 500, color: '#111827' }}>{displayDate}</div>
+                    <div style={{ fontSize: '0.78rem', color: '#9CA3AF' }}>Check-in Scheduled</div>
+                  </td>
+                  <td style={tdStyle}>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#374151', fontSize: '0.88rem', backgroundColor: '#F3F4F6', padding: '3px 8px', borderRadius: 6 }}>
+                      {orderId}
+                    </span>
+                  </td>
+                  <td style={tdStyle}>
+                    <div style={{ fontWeight: 600, color: '#111827' }}>{b.name || 'Guest'}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: 2 }}>
+                      {b.hotelName || 'Sabharwal Hotel'} {b.rooms ? `• ${b.rooms} Room(s)` : ''}
+                    </div>
+                  </td>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>
+                      ₹{(b.amount || 0).toLocaleString()}
+                    </span>
+                  </td>
+                  <td style={tdStyle}>
+                    {getMethodBadge(b)}
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: 'right' }}>
+                    {getStatusBadge(b.status)}
+                  </td>
+                </tr>
+              );
+            })}
+            {filteredBookings.length === 0 && (
+              <tr>
+                <td colSpan="6" style={{ padding: '48px 24px', textAlign: 'center', color: '#6B7280' }}>
+                  No payment transactions found matching the selected filter.
                 </td>
               </tr>
-            ))}
-            {bookings.length === 0 && <tr><td colSpan="5" style={{padding: 40, textAlign: 'center'}}>No transactions found.</td></tr>}
+            )}
           </tbody>
         </table>
       </div>
