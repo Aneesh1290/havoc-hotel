@@ -2175,11 +2175,134 @@ function SettingsView() {
           </button>
         </div>
 
+        <PaymentGatewaySettings />
+
         <EmailNotificationSettings />
 
         <AdminCredentialsForm />
       </div>
     </>
+  );
+}
+
+function PaymentGatewaySettings() {
+  const { paymentSettings, updatePaymentSettings } = useHotels();
+  const [localSettings, setLocalSettings] = useState({
+    enableOnlinePayment: paymentSettings?.enableOnlinePayment ?? true,
+    enablePayAtDesk: paymentSettings?.enablePayAtDesk ?? true
+  });
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (paymentSettings) {
+      setLocalSettings({
+        enableOnlinePayment: paymentSettings.enableOnlinePayment ?? true,
+        enablePayAtDesk: paymentSettings.enablePayAtDesk ?? true
+      });
+    }
+  }, [paymentSettings]);
+
+  const handleSave = async () => {
+    if (!localSettings.enableOnlinePayment && !localSettings.enablePayAtDesk) {
+      return alert("At least one payment option must remain enabled for guests to complete booking.");
+    }
+    await updatePaymentSettings(localSettings);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  return (
+    <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#111827', margin: 0 }}>Payment Gateway Visibility</h3>
+          <p style={{ color: '#6B7280', fontSize: '0.85rem', marginTop: 4 }}>
+            Choose which payment options are presented to guests on the checkout page.
+          </p>
+        </div>
+        <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D97706' }}>
+          <CreditCard size={20} />
+        </div>
+      </div>
+
+      {saved && (
+        <div style={{ padding: '10px 14px', borderRadius: 8, backgroundColor: '#ECFDF5', color: '#065F46', marginBottom: 20, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CheckCircle size={16} /> Payment gateway visibility updated!
+        </div>
+      )}
+
+      {/* Pay Online Gateway Toggle */}
+      <div style={{ padding: '16px', borderRadius: 12, backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontWeight: 600, color: '#111827', fontSize: '0.95rem' }}>Pay Online (Cards, UPI, Netbanking)</span>
+              <span style={{ fontSize: '0.72rem', backgroundColor: '#EFF6FF', color: '#1D4ED8', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>ICICI / Razorpay</span>
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
+              Allow guests to pay securely online prior to check-in
+            </p>
+          </div>
+          <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: 'pointer' }}>
+            <input 
+              type="checkbox" 
+              checked={localSettings.enableOnlinePayment}
+              onChange={e => setLocalSettings(prev => ({ ...prev, enableOnlinePayment: e.target.checked }))}
+              style={{ opacity: 0, width: 0, height: 0 }}
+            />
+            <span style={{
+              position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: localSettings.enableOnlinePayment ? '#10B981' : '#D1D5DB',
+              borderRadius: 24, transition: '.3s'
+            }}>
+              <span style={{
+                position: 'absolute', content: '""', height: 18, width: 18, left: 3, bottom: 3,
+                backgroundColor: 'white', borderRadius: '50%', transition: '.3s',
+                transform: localSettings.enableOnlinePayment ? 'translateX(20px)' : 'translateX(0)'
+              }} />
+            </span>
+          </label>
+        </div>
+      </div>
+
+      {/* Pay at Desk Toggle */}
+      <div style={{ padding: '16px', borderRadius: 12, backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontWeight: 600, color: '#111827', fontSize: '0.95rem' }}>Pay at Desk</span>
+              <span style={{ fontSize: '0.72rem', backgroundColor: '#ECFDF5', color: '#047857', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>Front Desk</span>
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
+              Allow guests to reserve without paying upfront and pay upon arrival
+            </p>
+          </div>
+          <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: 'pointer' }}>
+            <input 
+              type="checkbox" 
+              checked={localSettings.enablePayAtDesk}
+              onChange={e => setLocalSettings(prev => ({ ...prev, enablePayAtDesk: e.target.checked }))}
+              style={{ opacity: 0, width: 0, height: 0 }}
+            />
+            <span style={{
+              position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: localSettings.enablePayAtDesk ? '#10B981' : '#D1D5DB',
+              borderRadius: 24, transition: '.3s'
+            }}>
+              <span style={{
+                position: 'absolute', content: '""', height: 18, width: 18, left: 3, bottom: 3,
+                backgroundColor: 'white', borderRadius: '50%', transition: '.3s',
+                transform: localSettings.enablePayAtDesk ? 'translateX(20px)' : 'translateX(0)'
+              }} />
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <button onClick={handleSave} style={{ backgroundColor: '#0A192F', color: 'white', padding: '10px 24px', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+        Save Payment Visibility Settings
+      </button>
+    </div>
   );
 }
 

@@ -9,10 +9,13 @@ export default function Booking() {
   const { propertyId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { properties, rooms, bookings, addBooking, taxRate } = useHotels();
+  const { properties, rooms, bookings, addBooking, taxRate, paymentSettings } = useHotels();
 
   const property = properties.find(p => p.id === propertyId);
   const propertyRooms = rooms.filter(r => r.propertyId === propertyId);
+
+  const enableOnline = paymentSettings?.enableOnlinePayment ?? true;
+  const enablePayAtDesk = paymentSettings?.enablePayAtDesk ?? true;
 
   // Quick filters for Stay Duration and Cooling Type
   const [durationFilter, setDurationFilter] = useState('all'); // 'all' | '24h' | '12h'
@@ -103,11 +106,20 @@ export default function Booking() {
 
   // Checkout View State: 'select_rooms' | 'checkout'
   const [checkoutStep, setCheckoutStep] = useState('select_rooms');
-  const [paymentMethod, setPaymentMethod] = useState('online'); // 'online' | 'pay_at_desk'
+  const [paymentMethod, setPaymentMethod] = useState(() => (enableOnline ? 'online' : 'pay_at_desk'));
   const [couponCode, setCouponCode] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponMessage, setCouponMessage] = useState('');
+
+  // Keep paymentMethod aligned if admin disables current option
+  useEffect(() => {
+    if (!enableOnline && paymentMethod === 'online' && enablePayAtDesk) {
+      setPaymentMethod('pay_at_desk');
+    } else if (!enablePayAtDesk && paymentMethod === 'pay_at_desk' && enableOnline) {
+      setPaymentMethod('online');
+    }
+  }, [enableOnline, enablePayAtDesk, paymentMethod]);
 
   // Final confirmation state
   const [confirmedBookingData, setConfirmedBookingData] = useState(null);
@@ -583,76 +595,80 @@ export default function Booking() {
                   </h2>
 
                   {/* Option 1: Pay Online */}
-                  <div
-                    onClick={() => setPaymentMethod('online')}
-                    style={{
-                      border: paymentMethod === 'online' ? '2px solid #102641' : '1px solid #E5E7EB',
-                      backgroundColor: paymentMethod === 'online' ? '#F0F4F8' : '#FFFFFF',
-                      borderRadius: 12,
-                      padding: '18px 20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 16,
-                      cursor: 'pointer',
-                      marginBottom: 16,
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      checked={paymentMethod === 'online'}
-                      onChange={() => setPaymentMethod('online')}
-                      style={{ width: 18, height: 18, accentColor: '#102641', cursor: 'pointer' }}
-                    />
-                    <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: paymentMethod === 'online' ? '#102641' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <CreditCard size={20} color={paymentMethod === 'online' ? '#FFFFFF' : '#4B5563'} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.98rem', color: '#102641' }}>
-                        Pay Online (Cards, UPI, Netbanking)
+                  {enableOnline && (
+                    <div
+                      onClick={() => setPaymentMethod('online')}
+                      style={{
+                        border: paymentMethod === 'online' ? '2px solid #102641' : '1px solid #E5E7EB',
+                        backgroundColor: paymentMethod === 'online' ? '#F0F4F8' : '#FFFFFF',
+                        borderRadius: 12,
+                        padding: '18px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 16,
+                        cursor: 'pointer',
+                        marginBottom: enablePayAtDesk ? 16 : 24,
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        checked={paymentMethod === 'online'}
+                        onChange={() => setPaymentMethod('online')}
+                        style={{ width: 18, height: 18, accentColor: '#102641', cursor: 'pointer' }}
+                      />
+                      <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: paymentMethod === 'online' ? '#102641' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CreditCard size={20} color={paymentMethod === 'online' ? '#FFFFFF' : '#4B5563'} />
                       </div>
-                      <div style={{ fontSize: '0.82rem', color: '#6B7280', marginTop: 2 }}>
-                        Pay securely via ICICI & Razorpay Payment Gateway
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.98rem', color: '#102641' }}>
+                          Pay Online (Cards, UPI, Netbanking)
+                        </div>
+                        <div style={{ fontSize: '0.82rem', color: '#6B7280', marginTop: 2 }}>
+                          Pay securely via ICICI & Razorpay Payment Gateway
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Option 2: Pay at Desk */}
-                  <div
-                    onClick={() => setPaymentMethod('pay_at_desk')}
-                    style={{
-                      border: paymentMethod === 'pay_at_desk' ? '2px solid #102641' : '1px solid #E5E7EB',
-                      backgroundColor: paymentMethod === 'pay_at_desk' ? '#F0F4F8' : '#FFFFFF',
-                      borderRadius: 12,
-                      padding: '18px 20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 16,
-                      cursor: 'pointer',
-                      marginBottom: 24,
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      checked={paymentMethod === 'pay_at_desk'}
-                      onChange={() => setPaymentMethod('pay_at_desk')}
-                      style={{ width: 18, height: 18, accentColor: '#102641', cursor: 'pointer' }}
-                    />
-                    <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: paymentMethod === 'pay_at_desk' ? '#102641' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Building size={20} color={paymentMethod === 'pay_at_desk' ? '#FFFFFF' : '#4B5563'} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.98rem', color: '#102641' }}>
-                        Pay at Desk
+                  {enablePayAtDesk && (
+                    <div
+                      onClick={() => setPaymentMethod('pay_at_desk')}
+                      style={{
+                        border: paymentMethod === 'pay_at_desk' ? '2px solid #102641' : '1px solid #E5E7EB',
+                        backgroundColor: paymentMethod === 'pay_at_desk' ? '#F0F4F8' : '#FFFFFF',
+                        borderRadius: 12,
+                        padding: '18px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 16,
+                        cursor: 'pointer',
+                        marginBottom: 24,
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        checked={paymentMethod === 'pay_at_desk'}
+                        onChange={() => setPaymentMethod('pay_at_desk')}
+                        style={{ width: 18, height: 18, accentColor: '#102641', cursor: 'pointer' }}
+                      />
+                      <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: paymentMethod === 'pay_at_desk' ? '#102641' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Building size={20} color={paymentMethod === 'pay_at_desk' ? '#FFFFFF' : '#4B5563'} />
                       </div>
-                      <div style={{ fontSize: '0.82rem', color: '#6B7280', marginTop: 2 }}>
-                        Book now and pay with cash/card when you arrive
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.98rem', color: '#102641' }}>
+                          Pay at Desk
+                        </div>
+                        <div style={{ fontSize: '0.82rem', color: '#6B7280', marginTop: 2 }}>
+                          Book now and pay with cash/card when you arrive
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Legal Checkbox */}
                   <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, fontSize: '0.85rem', color: '#4B5563', cursor: 'pointer', userSelect: 'none' }}>

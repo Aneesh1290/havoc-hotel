@@ -85,6 +85,39 @@ export const HotelProvider = ({ children }) => {
     }
   };
 
+  // Payment Gateway Visibility Settings
+  const [paymentSettings, setPaymentSettings] = useState(() => {
+    const saved = localStorage.getItem('hotelPaymentSettings');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      enableOnlinePayment: true,
+      enablePayAtDesk: true
+    };
+  });
+
+  const updatePaymentSettings = async (updatedFields) => {
+    const newSettings = { ...paymentSettings, ...updatedFields };
+    setPaymentSettings(newSettings);
+    localStorage.setItem('hotelPaymentSettings', JSON.stringify(newSettings));
+    try {
+      await Promise.all(
+        Object.entries(updatedFields).map(([key, value]) =>
+          fetch(`${API_URL}/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key, value })
+          })
+        )
+      );
+    } catch (err) {
+      console.error("Failed to sync payment settings:", err);
+    }
+  };
+
   const [offers, setOffers] = useState([]);
 
   const addOffer = async (newOffer) => {
@@ -160,6 +193,13 @@ export const HotelProvider = ({ children }) => {
           };
           setBookingPolicies(loadedPolicies);
           localStorage.setItem('guestBookingPolicies', JSON.stringify(loadedPolicies));
+
+          const loadedPaymentSettings = {
+            enableOnlinePayment: settingsData.enableOnlinePayment !== undefined ? (settingsData.enableOnlinePayment === true || settingsData.enableOnlinePayment === 'true') : true,
+            enablePayAtDesk: settingsData.enablePayAtDesk !== undefined ? (settingsData.enablePayAtDesk === true || settingsData.enablePayAtDesk === 'true') : true
+          };
+          setPaymentSettings(loadedPaymentSettings);
+          localStorage.setItem('hotelPaymentSettings', JSON.stringify(loadedPaymentSettings));
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -304,6 +344,7 @@ export const HotelProvider = ({ children }) => {
       taxRate, updateTaxRate,
       offersEnabled, toggleOffers, offers, addOffer, removeOffer,
       bookingPolicies, updateBookingPolicies,
+      paymentSettings, updatePaymentSettings,
       loading
     }}>
       {children}
