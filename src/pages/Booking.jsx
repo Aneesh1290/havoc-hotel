@@ -696,24 +696,19 @@ export default function Booking() {
                     if (!room) return null;
                     const itemTotal = room.pricePerNight * count * nights;
                     return (
-                      <div key={roomId} style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                        <img
-                          src={room.images?.[0] || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=400&q=80'}
-                          alt={room.name}
-                          style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', border: '1px solid #E5E7EB' }}
-                        />
+                      <div key={roomId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#102641', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.98rem', color: '#102641', lineHeight: 1.3 }}>
                             {room.name} {count > 1 ? `(${count} Rooms)` : ''}
                           </div>
-                          <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: 3 }}>
+                          <div style={{ fontSize: '0.82rem', color: '#6B7280', marginTop: 4 }}>
                             {format(checkIn, 'MMM dd')} - {format(checkOut, 'MMM dd')} ({nights} Night{nights > 1 ? 's' : ''})
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#0369A1', marginTop: 2, fontWeight: 500 }}>
+                          <div style={{ fontSize: '0.78rem', color: '#0369A1', marginTop: 2, fontWeight: 500 }}>
                             Slot: 24-hr check-in guaranteed
                           </div>
                         </div>
-                        <div style={{ fontWeight: 700, fontSize: '1rem', color: '#102641', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#102641', whiteSpace: 'nowrap', paddingTop: 2 }}>
                           ₹{itemTotal.toLocaleString()}
                         </div>
                       </div>
