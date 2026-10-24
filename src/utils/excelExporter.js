@@ -212,12 +212,23 @@ export async function exportCorporateHotelExcel({ bookings = [], properties = []
   workbook.created = new Date();
   workbook.modified = new Date();
 
+  // Resolve hotel matching criteria
+  let targetHotelId = filterHotel;
+  let targetHotelName = filterHotel;
+  if (filterHotel !== 'all') {
+    const matchedProp = properties.find(p => p.id === filterHotel || p.name === filterHotel);
+    if (matchedProp) {
+      targetHotelId = matchedProp.id;
+      targetHotelName = matchedProp.name;
+    }
+  }
+
   // Filter by hotel property if selected
   const hotelFiltered = bookings.filter(b => {
-    if (filterHotel !== 'all' && b.hotelName !== filterHotel && b.hotelId !== filterHotel) {
-      return false;
-    }
-    return true;
+    if (filterHotel === 'all') return true;
+    if (b.hotelId && (b.hotelId === targetHotelId || b.hotelId === targetHotelName)) return true;
+    if (b.hotelName && (b.hotelName === targetHotelName || b.hotelName === targetHotelId)) return true;
+    return false;
   });
 
   // Sort chronologically by check-in date
@@ -317,6 +328,10 @@ export async function exportCorporateHotelExcel({ bookings = [], properties = []
   // Generate buffer and trigger browser download
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+
   let hotelNameResolved = filterHotel;
   if (filterHotel !== 'all') {
     const matchedProp = properties.find(p => p.id === filterHotel || p.name === filterHotel);

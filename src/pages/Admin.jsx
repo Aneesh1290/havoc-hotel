@@ -400,12 +400,21 @@ function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, ro
             <div key={p.id} style={{ flex: 1, backgroundColor: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ height: 140, backgroundImage: `url(${p.image})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
                 <button
-                  onClick={() => exportCorporateHotelExcel({ bookings, properties, rooms, filterHotel: p.id, filterDate: 'all' })}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    exportCorporateHotelExcel({ bookings, properties, rooms, filterHotel: p.id, filterDate: 'all' })
+                      .catch(err => {
+                        console.error('Export failed:', err);
+                        alert('Could not export report for ' + p.name + '. Check console for details.');
+                      });
+                  }}
                   title={`Export Excel report for ${p.name}`}
                   style={{
                     position: 'absolute',
                     top: 10,
                     right: 10,
+                    zIndex: 10,
                     backgroundColor: 'rgba(255, 255, 255, 0.95)',
                     backdropFilter: 'blur(4px)',
                     color: '#059669',
@@ -457,7 +466,15 @@ function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, ro
                     {pBookings.length} booking{pBookings.length !== 1 ? 's' : ''} today
                   </span>
                   <button
-                    onClick={() => exportCorporateHotelExcel({ bookings, properties, rooms, filterHotel: p.id, filterDate: 'all' })}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      exportCorporateHotelExcel({ bookings, properties, rooms, filterHotel: p.id, filterDate: 'all' })
+                        .catch(err => {
+                          console.error('Export failed:', err);
+                          alert('Could not export report for ' + p.name + '. Check console for details.');
+                        });
+                    }}
                     style={{
                       background: 'none',
                       border: 'none',
