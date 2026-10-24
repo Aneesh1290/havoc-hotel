@@ -447,15 +447,15 @@ export default function Booking() {
         </header>
 
         {/* 2-Column Theme Layout */}
-        <main style={{ maxWidth: 1240, margin: '0 auto', padding: '40px 24px 80px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) 440px', gap: 36, alignItems: 'start' }}>
+        <main style={{ maxWidth: 1240, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+          <div className="checkout-main-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) 440px', gap: 36, alignItems: 'start', padding: '40px 24px 80px', boxSizing: 'border-box' }}>
             
             {/* Left Column: Guest Details & Payment Selection */}
-            <div>
+            <div style={{ minWidth: 0, width: '100%' }}>
               <form id="checkoutForm" onSubmit={handleConfirmBooking}>
                 
                 {/* 1. Your Details Card */}
-                <div style={{ backgroundColor: '#FFFFFF', borderRadius: 16, border: '1px solid #E5E7EB', padding: '32px', marginBottom: 28, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                <div className="checkout-card" style={{ backgroundColor: '#FFFFFF', borderRadius: 16, border: '1px solid #E5E7EB', padding: '32px', marginBottom: 28, boxShadow: '0 4px 12px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, borderBottom: '1px solid #F3F4F6', paddingBottom: 14 }}>
                     <h2 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#102641', margin: 0, fontFamily: "'Playfair Display', serif" }}>
                       Your Details
@@ -597,7 +597,7 @@ export default function Booking() {
                 </div>
 
                 {/* 2. Payment Selection Card */}
-                <div style={{ backgroundColor: '#FFFFFF', borderRadius: 16, border: '1px solid #E5E7EB', padding: '32px', marginBottom: 28, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                <div className="checkout-card" style={{ backgroundColor: '#FFFFFF', borderRadius: 16, border: '1px solid #E5E7EB', padding: '32px', marginBottom: 28, boxShadow: '0 4px 12px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
                   <h2 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#102641', margin: '0 0 20px 0', fontFamily: "'Playfair Display', serif" }}>
                     Payment Option
                   </h2>
@@ -690,8 +690,8 @@ export default function Booking() {
             </div>
 
             {/* Right Column: Order Summary Card */}
-            <div>
-              <div style={{ backgroundColor: '#FFFFFF', borderRadius: 16, border: '1px solid #E5E7EB', padding: '28px', position: 'sticky', top: 90, boxShadow: '0 4px 14px rgba(0,0,0,0.05)' }}>
+            <div style={{ minWidth: 0, width: '100%' }}>
+              <div className="checkout-card checkout-sticky-summary" style={{ backgroundColor: '#FFFFFF', borderRadius: 16, border: '1px solid #E5E7EB', padding: '28px', position: 'sticky', top: 90, boxShadow: '0 4px 14px rgba(0,0,0,0.05)', boxSizing: 'border-box' }}>
                 <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#102641', margin: '0 0 20px 0', fontFamily: "'Playfair Display', serif" }}>
                   Order Summary
                 </h2>
@@ -1024,7 +1024,7 @@ export default function Booking() {
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6B7280', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
                   <Clock size={14} color="#0A192F" /> Stay Duration:
                 </span>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap' }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     onClick={() => setDurationFilter('all')}
@@ -1090,7 +1090,7 @@ export default function Booking() {
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6B7280', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
                   <Wind size={14} color="#0A192F" /> Room Type:
                 </span>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap' }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     onClick={() => setAcFilter('all')}
@@ -1214,14 +1214,14 @@ export default function Booking() {
                   <div className="booking-room-content" style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ marginBottom: 16 }}>
                       {guests.rooms < Math.ceil(guests.adults / room.capacity) && (
-                        <div style={{ backgroundColor: '#FFFBEB', padding: '8px 12px', borderRadius: 8, marginBottom: 16, border: '1px solid #FDE68A', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div className="booking-suggestion-banner" style={{ backgroundColor: '#FFFBEB', padding: '8px 12px', borderRadius: 8, marginBottom: 16, border: '1px solid #FDE68A', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                           <span style={{ fontSize: '0.8rem', color: '#92400E', fontWeight: 500 }}>
                             Need {Math.ceil(guests.adults / room.capacity)} rooms for {guests.adults} guests
                           </span>
                           {availableUnits >= Math.ceil(guests.adults / room.capacity) && (
                             <button
                               onClick={() => applySuggestion(Math.ceil(guests.adults / room.capacity))}
-                              style={{ padding: '6px 12px', borderRadius: 6, fontWeight: 600, cursor: 'pointer', border: 'none', backgroundColor: '#F59E0B', color: 'white', fontSize: '0.75rem' }}
+                              style={{ padding: '6px 12px', borderRadius: 6, fontWeight: 600, cursor: 'pointer', border: 'none', backgroundColor: '#F59E0B', color: 'white', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
                             >
                               Update Search
                             </button>

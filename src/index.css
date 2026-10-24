@@ -24,6 +24,12 @@ input:-webkit-autofill:active {
     -webkit-box-shadow: 0 0 0 30px #F9FAFB inset !important;
 }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-color);
@@ -1033,14 +1039,22 @@ button {
 
   .booking-main-layout {
     grid-template-columns: 1fr !important;
+    padding: 16px 14px 40px !important;
+    gap: 20px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   .booking-search-form {
     grid-template-columns: 1fr 1fr !important;
+    padding: 16px !important;
+    gap: 12px !important;
   }
   
   .booking-room-card {
     flex-direction: column !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   .booking-room-image {
@@ -1050,12 +1064,40 @@ button {
   
   .booking-room-content {
     padding: 16px !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  .booking-suggestion-banner {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  .booking-suggestion-banner button {
+    width: 100% !important;
   }
   
   .booking-header-title {
-    font-size: 1rem !important;
+    font-size: 0.95rem !important;
     white-space: normal !important;
-    max-width: 160px;
+    max-width: 180px;
+    line-height: 1.2 !important;
+  }
+
+  .checkout-main-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+    padding: 20px 14px 60px !important;
+  }
+
+  .checkout-card {
+    padding: 20px 16px !important;
+  }
+
+  .checkout-sticky-summary {
+    position: static !important;
+    top: auto !important;
   }
 }
 
