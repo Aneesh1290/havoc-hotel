@@ -264,7 +264,7 @@ export async function exportCorporateHotelExcel({ bookings = [], properties = []
   }
 
   // ========================================================
-  // TAB 1: "All Bookings"
+  // TAB 1: "All Bookings" (contains full archive)
   // ========================================================
   const wsAll = workbook.addWorksheet('All Bookings');
   buildReservationsSheet(wsAll, 'All Bookings', sortedBookings);
@@ -273,25 +273,45 @@ export async function exportCorporateHotelExcel({ bookings = [], properties = []
   // TAB 2: Yesterday (e.g. "Oct 23")
   // ========================================================
   const wsYesterday = workbook.addWorksheet(yesterdayTabName);
-  buildReservationsSheet(wsYesterday, yesterdayTabName, bookingsByDate[yesterdayTabName]);
+  buildReservationsSheet(wsYesterday, yesterdayTabName, bookingsByDate[yesterdayTabName] || []);
 
   // ========================================================
   // TAB 3: Today (e.g. "Oct 24")
   // ========================================================
   const wsToday = workbook.addWorksheet(todayTabName);
-  buildReservationsSheet(wsToday, todayTabName, bookingsByDate[todayTabName]);
+  buildReservationsSheet(wsToday, todayTabName, bookingsByDate[todayTabName] || []);
 
   // ========================================================
-  // TAB 4+: Future dates (e.g. "Oct 25", "Oct 26", etc.)
+  // TAB 4+: Strictly FUTURE dates (e.g. "Oct 25", "Oct 26", etc.)
+  // Older dates before yesterday are NOT given individual tabs
   // ========================================================
-  const allDateKeys = Object.keys(bookingsByDate);
-  allDateKeys.forEach(dKey => {
-    // Skip All Bookings, Yesterday, and Today since they are already rendered
-    if (dKey === yesterdayTabName || dKey === todayTabName) return;
+  // Find distinct future dates after today
+  const futureDateMap = {};
+  sortedBookings.forEach(b => {
+    if (!b.checkIn) return;
+    try {
+      const bDate = startOfDay(parseISO(b.checkIn));
+      if (bDate > todayStart) {
+        const dKey = format(bDate, 'MMM d');
+        if (!futureDateMap[dKey]) {
+          futureDateMap[dKey] = {
+            dateObj: bDate,
+            list: []
+          };
+        }
+        futureDateMap[dKey].list.push(b);
+      }
+    } catch (e) {}
+  });
 
-    // Check if this date is in the future
-    const wsDate = workbook.addWorksheet(dKey.substring(0, 31));
-    buildReservationsSheet(wsDate, dKey, bookingsByDate[dKey]);
+  // Sort future date tabs chronologically
+  const sortedFutureKeys = Object.keys(futureDateMap).sort((a, b) => {
+    return futureDateMap[a].dateObj.getTime() - futureDateMap[b].dateObj.getTime();
+  });
+
+  sortedFutureKeys.forEach(fKey => {
+    const wsDate = workbook.addWorksheet(fKey.substring(0, 31));
+    buildReservationsSheet(wsDate, fKey, futureDateMap[fKey].list);
   });
 
   // Generate buffer and trigger browser download
