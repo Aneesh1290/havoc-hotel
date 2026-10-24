@@ -380,25 +380,24 @@ export default function Booking() {
 
   if (checkoutStep === 'checkout') {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#0B0F17', color: '#E2E8F0', fontFamily: 'Inter, sans-serif' }}>
-        {/* Top Dark Header matching reference */}
-        <header style={{ backgroundColor: '#0F172A', borderBottom: '1px solid #1E293B', position: 'sticky', top: 0, zIndex: 40 }}>
-          <div style={{ maxWidth: 1240, margin: '0 auto', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #334155' }}>
-                <Building size={20} color="#38BDF8" />
-              </div>
+      <div style={{ minHeight: '100vh', backgroundColor: '#F7F4EE', color: '#102641', fontFamily: "'Outfit', sans-serif" }}>
+        {/* Top Header matching website theme */}
+        <header style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, zIndex: 40, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div style={{ maxWidth: 1240, margin: '0 auto', padding: '14px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <img src="/logo_dark.png" alt="Sabharwal Hospitality" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
+              <div style={{ width: 1, height: 26, backgroundColor: '#E5E7EB' }} className="hide-on-mobile" />
               <div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 800, letterSpacing: '0.08em', color: '#F8FAFC', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#102641', fontFamily: "'Playfair Display', serif", lineHeight: 1.2 }}>
                   {property.name}
                 </div>
-                <div style={{ fontSize: '0.7rem', color: '#94A3B8', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>
                   A Unit of Sabharwal Hospitality Group
                 </div>
               </div>
             </div>
 
-            <div style={{ fontSize: '1rem', fontWeight: 800, letterSpacing: '0.25em', color: '#94A3B8', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, letterSpacing: '0.22em', color: '#102641', textTransform: 'uppercase' }} className="hide-on-mobile">
               CHECKOUT
             </div>
 
@@ -413,13 +412,13 @@ export default function Booking() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
-                  color: '#94A3B8',
-                  fontSize: '0.88rem',
+                  color: '#4B5563',
+                  fontSize: '0.9rem',
                   fontWeight: 600,
                   transition: 'color 0.2s'
                 }}
-                onMouseEnter={e => e.currentTarget.style.color = '#F8FAFC'}
-                onMouseLeave={e => e.currentTarget.style.color = '#94A3B8'}
+                onMouseEnter={e => e.currentTarget.style.color = '#102641'}
+                onMouseLeave={e => e.currentTarget.style.color = '#4B5563'}
               >
                 <ArrowLeft size={16} /> Back to Rooms
               </button>
@@ -427,22 +426,29 @@ export default function Booking() {
           </div>
         </header>
 
-        {/* 2-Column Dark Layout */}
+        {/* 2-Column Theme Layout */}
         <main style={{ maxWidth: 1240, margin: '0 auto', padding: '40px 24px 80px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) 440px', gap: 40, alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) 440px', gap: 36, alignItems: 'start' }}>
             
             {/* Left Column: Guest Details & Payment Selection */}
             <div>
               <form id="checkoutForm" onSubmit={handleConfirmBooking}>
                 
                 {/* 1. Your Details Card */}
-                <div style={{ backgroundColor: '#131C2E', borderRadius: 16, border: '1px solid #1E293B', padding: '32px', marginBottom: 28, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
-                  <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#F8FAFC', margin: '0 0 24px 0', letterSpacing: '0.01em' }}>
-                    Your Details
-                  </h2>
+                <div style={{ backgroundColor: '#FFFFFF', borderRadius: 16, border: '1px solid #E5E7EB', padding: '32px', marginBottom: 28, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, borderBottom: '1px solid #F3F4F6', paddingBottom: 14 }}>
+                    <h2 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#102641', margin: 0, fontFamily: "'Playfair Display', serif" }}>
+                      Your Details
+                    </h2>
+                    {localStorage.getItem('guestProfile') && (
+                      <span style={{ fontSize: '0.8rem', color: '#059669', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, backgroundColor: '#ECFDF5', padding: '4px 10px', borderRadius: 20 }}>
+                        <CheckCircle size={14} /> Auto-filled
+                      </span>
+                    )}
+                  </div>
 
-                  <div style={{ marginBottom: 22 }}>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                       FULL NAME *
                     </label>
                     <input
@@ -453,22 +459,23 @@ export default function Booking() {
                       placeholder="e.g. John Doe"
                       style={{
                         width: '100%',
-                        padding: '14px 18px',
-                        backgroundColor: '#1E293B',
-                        border: '1px solid #334155',
+                        padding: '13px 16px',
+                        backgroundColor: '#F9FAFB',
+                        border: '1px solid #D1D5DB',
                         borderRadius: 10,
-                        color: '#F8FAFC',
+                        color: '#111827',
                         fontSize: '0.95rem',
                         outline: 'none',
-                        boxSizing: 'border-box'
+                        boxSizing: 'border-box',
+                        fontFamily: "'Outfit', sans-serif"
                       }}
-                      onFocus={e => e.target.style.borderColor = '#38BDF8'}
-                      onBlur={e => e.target.style.borderColor = '#334155'}
+                      onFocus={e => e.target.style.borderColor = '#102641'}
+                      onBlur={e => e.target.style.borderColor = '#D1D5DB'}
                     />
                   </div>
 
-                  <div style={{ marginBottom: 22 }}>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                       EMAIL ADDRESS *
                     </label>
                     <input
@@ -479,35 +486,37 @@ export default function Booking() {
                       placeholder="e.g. john@example.com"
                       style={{
                         width: '100%',
-                        padding: '14px 18px',
-                        backgroundColor: '#1E293B',
-                        border: '1px solid #334155',
+                        padding: '13px 16px',
+                        backgroundColor: '#F9FAFB',
+                        border: '1px solid #D1D5DB',
                         borderRadius: 10,
-                        color: '#F8FAFC',
+                        color: '#111827',
                         fontSize: '0.95rem',
                         outline: 'none',
-                        boxSizing: 'border-box'
+                        boxSizing: 'border-box',
+                        fontFamily: "'Outfit', sans-serif"
                       }}
-                      onFocus={e => e.target.style.borderColor = '#38BDF8'}
-                      onBlur={e => e.target.style.borderColor = '#334155'}
+                      onFocus={e => e.target.style.borderColor = '#102641'}
+                      onBlur={e => e.target.style.borderColor = '#D1D5DB'}
                     />
                   </div>
 
-                  <div style={{ marginBottom: 22 }}>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                       PHONE NUMBER *
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 12 }}>
                       <select
                         style={{
-                          backgroundColor: '#1E293B',
-                          border: '1px solid #334155',
+                          backgroundColor: '#F9FAFB',
+                          border: '1px solid #D1D5DB',
                           borderRadius: 10,
-                          color: '#F8FAFC',
-                          padding: '14px 12px',
+                          color: '#111827',
+                          padding: '13px 12px',
                           fontSize: '0.9rem',
                           outline: 'none',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          fontFamily: "'Outfit', sans-serif"
                         }}
                       >
                         <option value="+91">IN +91</option>
@@ -523,23 +532,24 @@ export default function Booking() {
                         placeholder="e.g. 98765 43210"
                         style={{
                           width: '100%',
-                          padding: '14px 18px',
-                          backgroundColor: '#1E293B',
-                          border: '1px solid #334155',
+                          padding: '13px 16px',
+                          backgroundColor: '#F9FAFB',
+                          border: '1px solid #D1D5DB',
                           borderRadius: 10,
-                          color: '#F8FAFC',
+                          color: '#111827',
                           fontSize: '0.95rem',
                           outline: 'none',
-                          boxSizing: 'border-box'
+                          boxSizing: 'border-box',
+                          fontFamily: "'Outfit', sans-serif"
                         }}
-                        onFocus={e => e.target.style.borderColor = '#38BDF8'}
-                        onBlur={e => e.target.style.borderColor = '#334155'}
+                        onFocus={e => e.target.style.borderColor = '#102641'}
+                        onBlur={e => e.target.style.borderColor = '#D1D5DB'}
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                       SPECIAL REQUESTS (OPTIONAL)
                     </label>
                     <textarea
@@ -549,34 +559,35 @@ export default function Booking() {
                       placeholder="Any specific requests, floor preference, or estimated arrival time..."
                       style={{
                         width: '100%',
-                        padding: '14px 18px',
-                        backgroundColor: '#1E293B',
-                        border: '1px solid #334155',
+                        padding: '13px 16px',
+                        backgroundColor: '#F9FAFB',
+                        border: '1px solid #D1D5DB',
                         borderRadius: 10,
-                        color: '#F8FAFC',
+                        color: '#111827',
                         fontSize: '0.95rem',
                         outline: 'none',
                         resize: 'vertical',
-                        boxSizing: 'border-box'
+                        boxSizing: 'border-box',
+                        fontFamily: "'Outfit', sans-serif"
                       }}
-                      onFocus={e => e.target.style.borderColor = '#38BDF8'}
-                      onBlur={e => e.target.style.borderColor = '#334155'}
+                      onFocus={e => e.target.style.borderColor = '#102641'}
+                      onBlur={e => e.target.style.borderColor = '#D1D5DB'}
                     />
                   </div>
                 </div>
 
                 {/* 2. Payment Selection Card */}
-                <div style={{ backgroundColor: '#131C2E', borderRadius: 16, border: '1px solid #1E293B', padding: '32px', marginBottom: 28, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
-                  <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#F8FAFC', margin: '0 0 24px 0', letterSpacing: '0.01em' }}>
-                    Payment
+                <div style={{ backgroundColor: '#FFFFFF', borderRadius: 16, border: '1px solid #E5E7EB', padding: '32px', marginBottom: 28, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                  <h2 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#102641', margin: '0 0 20px 0', fontFamily: "'Playfair Display', serif" }}>
+                    Payment Option
                   </h2>
 
                   {/* Option 1: Pay Online */}
                   <div
                     onClick={() => setPaymentMethod('online')}
                     style={{
-                      border: paymentMethod === 'online' ? '1.5px solid #F59E0B' : '1px solid #334155',
-                      backgroundColor: paymentMethod === 'online' ? '#1E293B' : '#0F172A',
+                      border: paymentMethod === 'online' ? '2px solid #102641' : '1px solid #E5E7EB',
+                      backgroundColor: paymentMethod === 'online' ? '#F0F4F8' : '#FFFFFF',
                       borderRadius: 12,
                       padding: '18px 20px',
                       display: 'flex',
@@ -592,14 +603,16 @@ export default function Booking() {
                       name="paymentMethod"
                       checked={paymentMethod === 'online'}
                       onChange={() => setPaymentMethod('online')}
-                      style={{ width: 18, height: 18, accentColor: '#F59E0B', cursor: 'pointer' }}
+                      style={{ width: 18, height: 18, accentColor: '#102641', cursor: 'pointer' }}
                     />
-                    <CreditCard size={22} color={paymentMethod === 'online' ? '#F59E0B' : '#94A3B8'} />
+                    <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: paymentMethod === 'online' ? '#102641' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CreditCard size={20} color={paymentMethod === 'online' ? '#FFFFFF' : '#4B5563'} />
+                    </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.98rem', color: '#F8FAFC' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.98rem', color: '#102641' }}>
                         Pay Online (Cards, UPI, Netbanking)
                       </div>
-                      <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: 2 }}>
+                      <div style={{ fontSize: '0.82rem', color: '#6B7280', marginTop: 2 }}>
                         Pay securely via ICICI & Razorpay Payment Gateway
                       </div>
                     </div>
@@ -609,8 +622,8 @@ export default function Booking() {
                   <div
                     onClick={() => setPaymentMethod('pay_at_desk')}
                     style={{
-                      border: paymentMethod === 'pay_at_desk' ? '1.5px solid #F59E0B' : '1px solid #334155',
-                      backgroundColor: paymentMethod === 'pay_at_desk' ? '#1E293B' : '#0F172A',
+                      border: paymentMethod === 'pay_at_desk' ? '2px solid #102641' : '1px solid #E5E7EB',
+                      backgroundColor: paymentMethod === 'pay_at_desk' ? '#F0F4F8' : '#FFFFFF',
                       borderRadius: 12,
                       padding: '18px 20px',
                       display: 'flex',
@@ -626,24 +639,26 @@ export default function Booking() {
                       name="paymentMethod"
                       checked={paymentMethod === 'pay_at_desk'}
                       onChange={() => setPaymentMethod('pay_at_desk')}
-                      style={{ width: 18, height: 18, accentColor: '#F59E0B', cursor: 'pointer' }}
+                      style={{ width: 18, height: 18, accentColor: '#102641', cursor: 'pointer' }}
                     />
-                    <Building size={22} color={paymentMethod === 'pay_at_desk' ? '#F59E0B' : '#94A3B8'} />
+                    <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: paymentMethod === 'pay_at_desk' ? '#102641' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Building size={20} color={paymentMethod === 'pay_at_desk' ? '#FFFFFF' : '#4B5563'} />
+                    </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.98rem', color: '#F8FAFC' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.98rem', color: '#102641' }}>
                         Pay at Desk
                       </div>
-                      <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: 2 }}>
+                      <div style={{ fontSize: '0.82rem', color: '#6B7280', marginTop: 2 }}>
                         Book now and pay with cash/card when you arrive
                       </div>
                     </div>
                   </div>
 
                   {/* Legal Checkbox */}
-                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, fontSize: '0.85rem', color: '#CBD5E1', cursor: 'pointer', userSelect: 'none' }}>
-                    <input type="checkbox" required style={{ width: 18, height: 18, marginTop: 2, accentColor: '#F59E0B', cursor: 'pointer' }} />
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, fontSize: '0.85rem', color: '#4B5563', cursor: 'pointer', userSelect: 'none' }}>
+                    <input type="checkbox" required style={{ width: 18, height: 18, marginTop: 2, accentColor: '#102641', cursor: 'pointer' }} />
                     <span>
-                      I agree to the <a href="/terms" target="_blank" rel="noreferrer" style={{ color: '#38BDF8', textDecoration: 'none' }}>Terms & Conditions</a> and <a href="/cancellation" target="_blank" rel="noreferrer" style={{ color: '#38BDF8', textDecoration: 'none' }}>Refund & Cancellation Policy</a>
+                      I agree to the <a href="/terms" target="_blank" rel="noreferrer" style={{ color: '#1E40AF', fontWeight: 600, textDecoration: 'underline' }}>Terms & Conditions</a> and <a href="/cancellation" target="_blank" rel="noreferrer" style={{ color: '#1E40AF', fontWeight: 600, textDecoration: 'underline' }}>Refund & Cancellation Policy</a>
                     </span>
                   </label>
                 </div>
@@ -652,13 +667,13 @@ export default function Booking() {
 
             {/* Right Column: Order Summary Card */}
             <div>
-              <div style={{ backgroundColor: '#131C2E', borderRadius: 16, border: '1px solid #1E293B', padding: '28px', position: 'sticky', top: 100, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
-                <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#F8FAFC', margin: '0 0 20px 0' }}>
+              <div style={{ backgroundColor: '#FFFFFF', borderRadius: 16, border: '1px solid #E5E7EB', padding: '28px', position: 'sticky', top: 90, boxShadow: '0 4px 14px rgba(0,0,0,0.05)' }}>
+                <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#102641', margin: '0 0 20px 0', fontFamily: "'Playfair Display', serif" }}>
                   Order Summary
                 </h2>
 
                 {/* Selected Rooms List */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24, borderBottom: '1px solid #1E293B', paddingBottom: 20 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24, borderBottom: '1px solid #E5E7EB', paddingBottom: 20 }}>
                   {Object.entries(selectedRooms).map(([roomId, count]) => {
                     if (count <= 0) return null;
                     const room = propertyRooms.find(r => r.id === roomId);
@@ -669,20 +684,20 @@ export default function Booking() {
                         <img
                           src={room.images?.[0] || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=400&q=80'}
                           alt={room.name}
-                          style={{ width: 68, height: 68, borderRadius: 10, objectFit: 'cover', border: '1px solid #334155' }}
+                          style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', border: '1px solid #E5E7EB' }}
                         />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#F8FAFC', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#102641', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {room.name} {count > 1 ? `(${count} Rooms)` : ''}
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: '#94A3B8', marginTop: 4 }}>
+                          <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: 3 }}>
                             {format(checkIn, 'MMM dd')} - {format(checkOut, 'MMM dd')} ({nights} Night{nights > 1 ? 's' : ''})
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#38BDF8', marginTop: 2 }}>
+                          <div style={{ fontSize: '0.75rem', color: '#0369A1', marginTop: 2, fontWeight: 500 }}>
                             Slot: 24-hr check-in guaranteed
                           </div>
                         </div>
-                        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#F8FAFC', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontWeight: 700, fontSize: '1rem', color: '#102641', whiteSpace: 'nowrap' }}>
                           ₹{itemTotal.toLocaleString()}
                         </div>
                       </div>
@@ -691,9 +706,9 @@ export default function Booking() {
                 </div>
 
                 {/* Coupon Code Block */}
-                <div style={{ backgroundColor: '#0F172A', borderRadius: 12, border: '1px solid #1E293B', padding: '16px', marginBottom: 24 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', fontWeight: 800, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
-                    <Tag size={14} /> HAVE A COUPON CODE?
+                <div style={{ backgroundColor: '#F8FAFC', borderRadius: 12, border: '1px solid #E2E8F0', padding: '16px', marginBottom: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.78rem', fontWeight: 800, color: '#102641', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                    <Tag size={15} color="#102641" /> HAVE A COUPON CODE?
                   </div>
                   <form onSubmit={handleApplyCoupon} style={{ display: 'flex', gap: 8 }}>
                     <input
@@ -703,25 +718,26 @@ export default function Booking() {
                       onChange={e => setCouponCode(e.target.value)}
                       style={{
                         flex: 1,
-                        backgroundColor: '#1E293B',
-                        border: '1px solid #334155',
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
                         borderRadius: 8,
-                        color: '#F8FAFC',
+                        color: '#102641',
                         padding: '10px 14px',
                         fontSize: '0.85rem',
                         textTransform: 'uppercase',
-                        outline: 'none'
+                        outline: 'none',
+                        fontFamily: "'Outfit', sans-serif"
                       }}
                     />
                     <button
                       type="submit"
                       style={{
-                        backgroundColor: '#F59E0B',
-                        color: '#0F172A',
+                        backgroundColor: '#102641',
+                        color: '#FFFFFF',
                         border: 'none',
                         borderRadius: 8,
-                        padding: '0 18px',
-                        fontWeight: 700,
+                        padding: '0 20px',
+                        fontWeight: 600,
                         fontSize: '0.85rem',
                         cursor: 'pointer',
                         transition: 'opacity 0.2s'
@@ -733,39 +749,39 @@ export default function Booking() {
                     </button>
                   </form>
                   {couponMessage && (
-                    <div style={{ fontSize: '0.75rem', marginTop: 8, color: couponApplied ? '#10B981' : '#F87171' }}>
+                    <div style={{ fontSize: '0.75rem', marginTop: 8, fontWeight: 500, color: couponApplied ? '#059669' : '#DC2626' }}>
                       {couponMessage}
                     </div>
                   )}
                 </div>
 
                 {/* Price Breakdown */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24, fontSize: '0.9rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24, fontSize: '0.92rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#6B7280' }}>
                     <span>Subtotal</span>
-                    <span style={{ color: '#F8FAFC' }}>₹{subtotal.toLocaleString()}</span>
+                    <span style={{ color: '#102641', fontWeight: 600 }}>₹{subtotal.toLocaleString()}</span>
                   </div>
 
                   {couponDiscount > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10B981' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669' }}>
                       <span>Discount ({couponDiscount * 100}%)</span>
-                      <span>-₹{discountAmount.toLocaleString()}</span>
+                      <span style={{ fontWeight: 600 }}>-₹{discountAmount.toLocaleString()}</span>
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#6B7280' }}>
                     <span>Booking Fee</span>
-                    <span style={{ color: '#10B981', fontWeight: 600 }}>Free</span>
+                    <span style={{ color: '#059669', fontWeight: 600 }}>Free</span>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#6B7280' }}>
                     <span>GST ({taxRate}%)</span>
-                    <span style={{ color: '#F8FAFC' }}>₹{taxes.toLocaleString()}</span>
+                    <span style={{ color: '#102641', fontWeight: 600 }}>₹{taxes.toLocaleString()}</span>
                   </div>
 
-                  <div style={{ borderTop: '1px solid #1E293B', paddingTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#F8FAFC' }}>Total</span>
-                    <span style={{ fontSize: '1.45rem', fontWeight: 800, color: '#F8FAFC' }}>₹{totalPrice.toLocaleString()}</span>
+                  <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#102641', fontFamily: "'Playfair Display', serif" }}>Total</span>
+                    <span style={{ fontSize: '1.45rem', fontWeight: 800, color: '#102641' }}>₹{totalPrice.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -778,35 +794,35 @@ export default function Booking() {
                     padding: '16px',
                     borderRadius: 10,
                     border: 'none',
-                    backgroundColor: '#F59E0B',
-                    color: '#0F172A',
-                    fontWeight: 800,
-                    fontSize: '1rem',
+                    backgroundColor: '#102641',
+                    color: '#FFFFFF',
+                    fontWeight: 700,
+                    fontSize: '1.05rem',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: 8,
+                    gap: 10,
                     marginBottom: 20,
                     transition: 'all 0.2s',
-                    boxShadow: '0 4px 14px rgba(245, 158, 11, 0.3)'
+                    boxShadow: '0 4px 12px rgba(16, 38, 65, 0.25)'
                   }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#D97706'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#F59E0B'}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1A365D'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#102641'}
                 >
                   <Lock size={18} /> Confirm Reservation — ₹{totalPrice.toLocaleString()}
                 </button>
 
                 {/* Payment Methods Badges Footer */}
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.72rem', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                  <div style={{ fontSize: '0.72rem', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>
                     Supported Payment Methods
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', backgroundColor: '#FFFFFF', borderRadius: 4, color: '#1A1F71' }}>VISA</span>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', backgroundColor: '#FFFFFF', borderRadius: 4, color: '#EB001B' }}>Mastercard</span>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', backgroundColor: '#FFFFFF', borderRadius: 4, color: '#097939' }}>RuPay</span>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', backgroundColor: '#FFFFFF', borderRadius: 4, color: '#5F259F' }}>UPI</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 4, color: '#1A1F71' }}>VISA</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 4, color: '#EB001B' }}>Mastercard</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 4, color: '#097939' }}>RuPay</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 4, color: '#5F259F' }}>UPI</span>
                   </div>
                 </div>
 
@@ -818,52 +834,52 @@ export default function Booking() {
 
         {/* Confirmation Modal */}
         {confirmedBookingData && (
-          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.85)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-            <div style={{ backgroundColor: '#131C2E', border: '1px solid #1E293B', width: '100%', maxWidth: 520, borderRadius: 20, overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', width: '100%', maxWidth: 520, borderRadius: 20, overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
               
-              <div style={{ backgroundColor: '#0F172A', color: 'white', padding: '32px 24px', textAlign: 'center', borderBottom: '1px solid #1E293B' }}>
+              <div style={{ backgroundColor: '#102641', color: 'white', padding: '32px 24px', textAlign: 'center' }}>
                 <div style={{ width: 64, height: 64, borderRadius: '50%', backgroundColor: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 8px 16px rgba(16, 185, 129, 0.3)' }}>
                   <CheckCircle size={36} color="white" />
                 </div>
-                <h2 style={{ fontSize: '1.6rem', fontWeight: 700, margin: '0 0 6px', color: '#F8FAFC' }}>Reservation Confirmed</h2>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: 700, margin: '0 0 6px', color: '#FFFFFF', fontFamily: "'Playfair Display', serif" }}>Reservation Confirmed</h2>
                 <p style={{ margin: 0, fontSize: '0.9rem', color: '#94A3B8' }}>
-                  Confirmation sent to <strong style={{ color: '#F8FAFC' }}>{confirmedBookingData.guestEmail}</strong>
+                  Confirmation sent to <strong style={{ color: '#FFFFFF' }}>{confirmedBookingData.guestEmail}</strong>
                 </p>
               </div>
 
               <div style={{ padding: 28 }}>
-                <div style={{ backgroundColor: '#0B0F17', border: '1px solid #1E293B', borderRadius: 12, padding: 18, marginBottom: 20 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1E293B', paddingBottom: 12, marginBottom: 12 }}>
+                <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: 18, marginBottom: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: 12, marginBottom: 12 }}>
                     <div>
                       <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 600 }}>Booking ID</span>
-                      <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#F59E0B', marginTop: 2 }}>{confirmedBookingData.bookingId}</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#102641', marginTop: 2 }}>{confirmedBookingData.bookingId}</div>
                     </div>
-                    <span style={{ backgroundColor: '#064E3B', color: '#34D399', fontSize: '0.8rem', fontWeight: 700, padding: '4px 10px', borderRadius: 20, border: '1px solid #059669' }}>
+                    <span style={{ backgroundColor: '#ECFDF5', color: '#059669', fontSize: '0.8rem', fontWeight: 700, padding: '4px 10px', borderRadius: 20, border: '1px solid #A7F3D0' }}>
                       {confirmedBookingData.paymentMethod === 'online' ? 'Online Paid' : 'Pay at Desk'}
                     </span>
                   </div>
 
                   <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontWeight: 700, color: '#F8FAFC', fontSize: '1.05rem', marginBottom: 2 }}>{confirmedBookingData.hotelName}</div>
-                    <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>{confirmedBookingData.hotelLocation}</div>
+                    <div style={{ fontWeight: 700, color: '#102641', fontSize: '1.05rem', marginBottom: 2, fontFamily: "'Playfair Display', serif" }}>{confirmedBookingData.hotelName}</div>
+                    <div style={{ fontSize: '0.85rem', color: '#64748B' }}>{confirmedBookingData.hotelLocation}</div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, borderTop: '1px solid #1E293B', paddingTop: 12, marginBottom: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, borderTop: '1px solid #E2E8F0', paddingTop: 12, marginBottom: 12 }}>
                     <div>
                       <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500, display: 'block' }}>Check-in</span>
-                      <strong style={{ fontSize: '0.9rem', color: '#E2E8F0' }}>{format(confirmedBookingData.checkIn, 'EEE, dd MMM yyyy')}</strong>
+                      <strong style={{ fontSize: '0.9rem', color: '#1E293B' }}>{format(confirmedBookingData.checkIn, 'EEE, dd MMM yyyy')}</strong>
                     </div>
                     <div>
                       <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500, display: 'block' }}>Check-out</span>
-                      <strong style={{ fontSize: '0.9rem', color: '#E2E8F0' }}>{format(confirmedBookingData.checkOut, 'EEE, dd MMM yyyy')}</strong>
+                      <strong style={{ fontSize: '0.9rem', color: '#1E293B' }}>{format(confirmedBookingData.checkOut, 'EEE, dd MMM yyyy')}</strong>
                     </div>
                   </div>
 
-                  <div style={{ borderTop: '1px solid #1E293B', paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.9rem', color: '#94A3B8' }}>
+                  <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.9rem', color: '#64748B' }}>
                       Total ({confirmedBookingData.nights} Night{confirmedBookingData.nights > 1 ? 's' : ''}, Taxes incl.)
                     </span>
-                    <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#F8FAFC' }}>
+                    <span style={{ fontSize: '1.35rem', fontWeight: 800, color: '#102641' }}>
                       ₹{confirmedBookingData.totalAmount.toLocaleString()}
                     </span>
                   </div>
@@ -877,12 +893,13 @@ export default function Booking() {
                       flex: 1,
                       padding: '14px',
                       borderRadius: 10,
-                      backgroundColor: '#F59E0B',
-                      color: '#0F172A',
+                      backgroundColor: '#102641',
+                      color: '#FFFFFF',
                       border: 'none',
                       fontWeight: 700,
                       fontSize: '0.95rem',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(16, 38, 65, 0.25)'
                     }}
                   >
                     Go to Guest Panel →
@@ -893,9 +910,9 @@ export default function Booking() {
                     style={{
                       padding: '14px 20px',
                       borderRadius: 10,
-                      backgroundColor: '#1E293B',
-                      color: '#E2E8F0',
-                      border: '1px solid #334155',
+                      backgroundColor: '#F1F5F9',
+                      color: '#334155',
+                      border: '1px solid #CBD5E1',
                       fontWeight: 600,
                       fontSize: '0.95rem',
                       cursor: 'pointer'
