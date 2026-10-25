@@ -17,6 +17,14 @@ export default function Hotels() {
   });
 
   const handleCardSelect = (property) => {
+    if (property.status === 'coming_soon') {
+      alert(`${property.name} is coming soon! Online reservations will open shortly.`);
+      return;
+    }
+    if (property.status === 'disabled') {
+      alert(`${property.name} is currently unavailable for bookings.`);
+      return;
+    }
     navigate(`/book/${property.id}`);
   };
 

@@ -306,6 +306,39 @@ export default function Booking() {
     return <div style={{ padding: 40, textAlign: 'center' }}>Property not found. <Link to="/">Go back</Link></div>;
   }
 
+  if (property.status === 'coming_soon') {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center', fontFamily: "'Outfit', sans-serif" }}>
+        <div style={{ maxWidth: 520, backgroundColor: '#FFFFFF', padding: '48px 36px', borderRadius: 24, border: '1px solid #E2E8F0', boxShadow: '0 20px 40px rgba(0,0,0,0.06)' }}>
+          <div style={{ fontSize: '3rem', marginBottom: 16 }}>⏳</div>
+          <span style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '0.8rem', fontWeight: 800, padding: '6px 14px', borderRadius: 20, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            Coming Soon
+          </span>
+          <h1 style={{ fontSize: '2rem', fontFamily: "'Playfair Display', serif", color: '#102641', margin: '18px 0 10px' }}>
+            {property.name}
+          </h1>
+          <p style={{ color: '#64748B', fontSize: '1rem', lineHeight: 1.6, marginBottom: 28 }}>
+            We are preparing this property to welcome you with our signature hospitality. Online reservations and slot bookings will open very soon!
+          </p>
+          <button
+            onClick={() => navigate('/hotels')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#102641',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: 10,
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            ← Explore Available Properties
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // If the selected property is a Banquet / Event Hall, render dedicated banquet reservation flow
   if (property.propertyType === 'banquet') {
     return <BanquetBooking property={property} />;

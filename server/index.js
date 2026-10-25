@@ -269,11 +269,11 @@ app.get('/api/properties', (req, res) => {
 });
 
 app.post('/api/properties', (req, res) => {
-  const { id, name, location, image, roomsAvailable, pricePerNight, amenities, propertyType, capacity } = req.body;
+  const { id, name, location, image, roomsAvailable, pricePerNight, amenities, propertyType, capacity, status } = req.body;
   try {
     const stmt = db.prepare(`
-      INSERT INTO properties (id, name, location, image, roomsAvailable, pricePerNight, amenities, propertyType, capacity) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO properties (id, name, location, image, roomsAvailable, pricePerNight, amenities, propertyType, capacity, status) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       id, 
@@ -284,7 +284,8 @@ app.post('/api/properties', (req, res) => {
       pricePerNight || 0, 
       JSON.stringify(amenities || []),
       propertyType || 'hotel',
-      capacity || 0
+      capacity || 0,
+      status || 'active'
     );
     res.json({ success: true, id });
   } catch (error) {
@@ -306,11 +307,11 @@ app.delete('/api/properties/:id', (req, res) => {
 });
 
 app.put('/api/properties/:id', (req, res) => {
-  const { name, location, image, pricePerNight, amenities, propertyType, capacity } = req.body;
+  const { name, location, image, pricePerNight, amenities, propertyType, capacity, status } = req.body;
   try {
     const stmt = db.prepare(`
       UPDATE properties 
-      SET name = ?, location = ?, image = ?, pricePerNight = ?, amenities = ?, propertyType = ?, capacity = ? 
+      SET name = ?, location = ?, image = ?, pricePerNight = ?, amenities = ?, propertyType = ?, capacity = ?, status = ? 
       WHERE id = ?
     `);
     stmt.run(
@@ -320,7 +321,8 @@ app.put('/api/properties/:id', (req, res) => {
       pricePerNight || 0, 
       JSON.stringify(amenities || []), 
       propertyType || 'hotel', 
-      capacity || 0, 
+      capacity || 0,
+      status || 'active',
       req.params.id
     );
     res.json({ success: true });

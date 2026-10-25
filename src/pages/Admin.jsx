@@ -1368,6 +1368,7 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
     setFormData({ 
       id: '', name: '', location: '', image: '', pricePerNight: 5000, 
       propertyType: 'hotel', capacity: 0,
+      status: 'active',
       amenities: [{ name: 'Free WiFi', icon: 'Wifi' }] 
     });
     setShowModal(true);
@@ -1378,7 +1379,8 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
     setFormData({
       ...p,
       propertyType: p.propertyType || 'hotel',
-      capacity: p.capacity || 0
+      capacity: p.capacity || 0,
+      status: p.status || 'active'
     });
     setShowModal(true);
   };
@@ -1426,6 +1428,7 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
             <tr>
               <th style={thStyle}>Property Details</th>
               <th style={thStyle}>Location</th>
+              <th style={thStyle}>Status</th>
               <th style={thStyle}>Room Types</th>
               <th style={thStyle}>Total Inventory</th>
               <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
@@ -1435,6 +1438,7 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
             {properties.map((p, idx) => {
               const propRooms = rooms.filter(r => r.propertyId === p.id);
               const totalInventory = propRooms.reduce((sum, r) => sum + r.totalUnits, 0);
+              const pStatus = p.status || 'active';
 
               return (
                 <tr key={p.id} style={{ borderBottom: idx === properties.length - 1 ? 'none' : '1px solid #E5E7EB' }}>
@@ -1463,6 +1467,24 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
                     </div>
                   </td>
                   <td style={{ ...tdStyle, color: '#4B5563' }}>{p.location}</td>
+                  <td style={tdStyle}>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '4px 10px',
+                      borderRadius: 20,
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      backgroundColor: pStatus === 'active' ? '#ECFDF5' : (pStatus === 'coming_soon' ? '#FEF3C7' : '#F1F5F9'),
+                      color: pStatus === 'active' ? '#065F46' : (pStatus === 'coming_soon' ? '#92400E' : '#475569'),
+                      border: pStatus === 'active' ? '1px solid #A7F3D0' : (pStatus === 'coming_soon' ? '1px solid #FDE68A' : '1px solid #CBD5E1')
+                    }}>
+                      {pStatus === 'active' && '● Live & Bookable'}
+                      {pStatus === 'coming_soon' && '⏳ Coming Soon'}
+                      {pStatus === 'disabled' && '🔒 Disabled / Hidden'}
+                    </span>
+                  </td>
                   <td style={{ ...tdStyle, color: '#4B5563' }}>
                     {p.propertyType === 'banquet' ? 'Event Hall Space' : `${propRooms.length} Types`}
                   </td>
@@ -1517,7 +1539,7 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
               <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
             <form onSubmit={handleSubmit} style={{ padding: 24 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 20 }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', fontWeight: 500 }}>Property Category</label>
                   <select 
@@ -1529,9 +1551,21 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
                     <option value="banquet">🏛️ Banquet / Event Hall</option>
                   </select>
                 </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', fontWeight: 500 }}>Availability Status</label>
+                  <select 
+                    value={formData.status || 'active'} 
+                    onChange={e => setFormData({ ...formData, status: e.target.value })}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB', backgroundColor: 'white', fontWeight: 500 }}
+                  >
+                    <option value="active">🟢 Active (Open for Booking)</option>
+                    <option value="coming_soon">⏳ Coming Soon (Preview Only)</option>
+                    <option value="disabled">🔒 Disabled / Hidden</option>
+                  </select>
+                </div>
                 {formData.propertyType === 'banquet' && (
                   <div>
-                    <label style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', fontWeight: 500 }}>Max Guest Capacity</label>
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', fontWeight: 500 }}>Max Capacity</label>
                     <input 
                       type="number" 
                       placeholder="e.g. 350"
