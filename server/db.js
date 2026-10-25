@@ -180,6 +180,14 @@ try {
   db.exec("ALTER TABLE admins ADD COLUMN allowedProperties TEXT DEFAULT '[]'");
 } catch (e) {}
 
+try {
+  db.exec("ALTER TABLE properties ADD COLUMN propertyType TEXT DEFAULT 'hotel'");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE properties ADD COLUMN capacity INTEGER DEFAULT 0");
+} catch (e) {}
+
 // Auto-migrate any legacy misspelled "Banglore" to "Bengaluru, Karnataka"
 try {
   db.prepare("UPDATE properties SET location = 'Bengaluru, Karnataka' WHERE location = 'Banglore'").run();

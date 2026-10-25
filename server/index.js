@@ -269,13 +269,23 @@ app.get('/api/properties', (req, res) => {
 });
 
 app.post('/api/properties', (req, res) => {
-  const { id, name, location, image, roomsAvailable, pricePerNight, amenities } = req.body;
+  const { id, name, location, image, roomsAvailable, pricePerNight, amenities, propertyType, capacity } = req.body;
   try {
     const stmt = db.prepare(`
-      INSERT INTO properties (id, name, location, image, roomsAvailable, pricePerNight, amenities) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO properties (id, name, location, image, roomsAvailable, pricePerNight, amenities, propertyType, capacity) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    stmt.run(id, name, location, image, roomsAvailable, pricePerNight, JSON.stringify(amenities));
+    stmt.run(
+      id, 
+      name, 
+      location, 
+      image, 
+      roomsAvailable || 0, 
+      pricePerNight || 0, 
+      JSON.stringify(amenities || []),
+      propertyType || 'hotel',
+      capacity || 0
+    );
     res.json({ success: true, id });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -296,10 +306,23 @@ app.delete('/api/properties/:id', (req, res) => {
 });
 
 app.put('/api/properties/:id', (req, res) => {
-  const { name, location, image, pricePerNight, amenities } = req.body;
+  const { name, location, image, pricePerNight, amenities, propertyType, capacity } = req.body;
   try {
-    const stmt = db.prepare('UPDATE properties SET name = ?, location = ?, image = ?, pricePerNight = ?, amenities = ? WHERE id = ?');
-    stmt.run(name, location, image, pricePerNight, JSON.stringify(amenities), req.params.id);
+    const stmt = db.prepare(`
+      UPDATE properties 
+      SET name = ?, location = ?, image = ?, pricePerNight = ?, amenities = ?, propertyType = ?, capacity = ? 
+      WHERE id = ?
+    `);
+    stmt.run(
+      name, 
+      location, 
+      image, 
+      pricePerNight || 0, 
+      JSON.stringify(amenities || []), 
+      propertyType || 'hotel', 
+      capacity || 0, 
+      req.params.id
+    );
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });

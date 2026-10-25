@@ -1270,6 +1270,7 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
   const [isUploading, setIsUploading] = useState(false);
   const [formData, setFormData] = useState({
     id: '', name: '', location: '', image: '', pricePerNight: 0,
+    propertyType: 'hotel', capacity: 0,
     amenities: [{ name: 'Free WiFi', icon: 'Wifi' }]
   });
   const [customAmenity, setCustomAmenity] = useState('');
@@ -1280,10 +1281,12 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
     { name: 'Restaurant', icon: 'Coffee' },
     { name: 'Swimming Pool', icon: 'Waves' },
     { name: 'Parking', icon: 'Car' },
-    { name: 'Gym', icon: 'Dumbbell' },
-    { name: 'Mountain View', icon: 'Mountain' },
-    { name: 'Central Location', icon: 'MapPin' },
-    { name: 'Adventure', icon: 'Tent' }
+    { name: 'Central AC', icon: 'Wind' },
+    { name: 'Banquet Stage & Lighting', icon: 'Sparkles' },
+    { name: 'In-House Catering', icon: 'Coffee' },
+    { name: 'Audio & Mic System', icon: 'Headset' },
+    { name: 'Bridal Dressing Room', icon: 'BedDouble' },
+    { name: 'Central Location', icon: 'MapPin' }
   ];
 
   const allAvailableAmenities = [
@@ -1350,9 +1353,6 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
       });
       const result = await res.json();
       if (result.success) {
-        // Backend returns URL starting with /uploads/ which is served by Express
-        // But our React app runs on Vite proxy or we need full URL.
-        // Let's use the full URL to be safe, or assume proxy works.
         setFormData(prev => ({ ...prev, image: `${result.url}` }));
       }
     } catch (err) {
@@ -1365,13 +1365,21 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
 
   const handleOpenAdd = () => {
     setIsEditing(false);
-    setFormData({ id: '', name: '', location: '', image: '', pricePerNight: 5000, amenities: [{ name: 'Free WiFi', icon: 'Wifi' }] });
+    setFormData({ 
+      id: '', name: '', location: '', image: '', pricePerNight: 5000, 
+      propertyType: 'hotel', capacity: 0,
+      amenities: [{ name: 'Free WiFi', icon: 'Wifi' }] 
+    });
     setShowModal(true);
   };
 
   const handleOpenEdit = (p) => {
     setIsEditing(true);
-    setFormData(p);
+    setFormData({
+      ...p,
+      propertyType: p.propertyType || 'hotel',
+      capacity: p.capacity || 0
+    });
     setShowModal(true);
   };
 
@@ -1434,14 +1442,33 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                       <img src={p.image} alt={p.name} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
                       <div>
-                        <div style={{ fontWeight: 600, color: '#111827', fontSize: '0.95rem' }}>{p.name}</div>
-                        <div style={{ color: '#6B7280', fontSize: '0.8rem', marginTop: 2 }}>ID: #{p.id.substring(0, 6).toUpperCase()}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontWeight: 600, color: '#111827', fontSize: '0.95rem' }}>{p.name}</span>
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: 12,
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            backgroundColor: p.propertyType === 'banquet' ? '#FEF3C7' : '#EFF6FF',
+                            color: p.propertyType === 'banquet' ? '#92400E' : '#1E40AF'
+                          }}>
+                            {p.propertyType === 'banquet' ? '🏛️ Banquet' : '🏨 Hotel'}
+                          </span>
+                        </div>
+                        <div style={{ color: '#6B7280', fontSize: '0.8rem', marginTop: 2 }}>
+                          ID: #{p.id.substring(0, 6).toUpperCase()}
+                          {p.propertyType === 'banquet' && p.capacity > 0 && ` • Capacity: ${p.capacity} Guests`}
+                        </div>
                       </div>
                     </div>
                   </td>
                   <td style={{ ...tdStyle, color: '#4B5563' }}>{p.location}</td>
-                  <td style={{ ...tdStyle, color: '#4B5563' }}>{propRooms.length} Types</td>
-                  <td style={{ ...tdStyle, color: '#111827', fontWeight: 600 }}>{totalInventory} Rooms</td>
+                  <td style={{ ...tdStyle, color: '#4B5563' }}>
+                    {p.propertyType === 'banquet' ? 'Event Hall Space' : `${propRooms.length} Types`}
+                  </td>
+                  <td style={{ ...tdStyle, color: '#111827', fontWeight: 600 }}>
+                    {p.propertyType === 'banquet' ? (p.capacity > 0 ? `${p.capacity} Guests` : 'Event Space') : `${totalInventory} Rooms`}
+                  </td>
                   <td style={{ ...tdStyle, textAlign: 'right' }}>
                     <button 
                       onClick={() => exportCorporateHotelExcel({ bookings, properties, rooms, filterHotel: p.id, filterDate: 'all' })}
@@ -1490,8 +1517,34 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
               <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
             <form onSubmit={handleSubmit} style={{ padding: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 20 }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', fontWeight: 500 }}>Property Category</label>
+                  <select 
+                    value={formData.propertyType || 'hotel'} 
+                    onChange={e => setFormData({ ...formData, propertyType: e.target.value })}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB', backgroundColor: 'white', fontWeight: 500 }}
+                  >
+                    <option value="hotel">🏨 Hotel / Stay</option>
+                    <option value="banquet">🏛️ Banquet / Event Hall</option>
+                  </select>
+                </div>
+                {formData.propertyType === 'banquet' && (
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', fontWeight: 500 }}>Max Guest Capacity</label>
+                    <input 
+                      type="number" 
+                      placeholder="e.g. 350"
+                      value={formData.capacity || ''} 
+                      onChange={e => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB' }}
+                    />
+                  </div>
+                )}
+              </div>
+
               <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', fontWeight: 500 }}>Property Name</label>
+                <label style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', fontWeight: 500 }}>Property / Hall Name</label>
                 <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB' }} required />
               </div>
               <div style={{ marginBottom: 20 }}>

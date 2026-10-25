@@ -4,6 +4,7 @@ import { useHotels } from '../context/HotelContext';
 import { Calendar as CalendarIcon, Users, ArrowLeft, CheckCircle, X, Plus, Minus, Lock, User, Eye, EyeOff, AlertCircle, Clock, Wind, Flame, Sparkles, CreditCard, ShieldCheck, Tag, Info, Building } from 'lucide-react';
 import { format, parseISO, differenceInDays, areIntervalsOverlapping, isSameDay } from 'date-fns';
 import Footer from '../components/Footer';
+import BanquetBooking from '../components/BanquetBooking';
 
 export default function Booking() {
   const { propertyId } = useParams();
@@ -303,6 +304,11 @@ export default function Booking() {
 
   if (!property) {
     return <div style={{ padding: 40, textAlign: 'center' }}>Property not found. <Link to="/">Go back</Link></div>;
+  }
+
+  // If the selected property is a Banquet / Event Hall, render dedicated banquet reservation flow
+  if (property.propertyType === 'banquet') {
+    return <BanquetBooking property={property} />;
   }
 
   const nights = differenceInDays(checkOut, checkIn) || 1;
