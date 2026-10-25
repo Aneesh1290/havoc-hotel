@@ -39,15 +39,6 @@ export default function Contact() {
                 <div style={{ fontSize: '0.82rem', color: '#6B7280', marginTop: 4 }}>Corporate & Billing Support: Mon - Sat (9:30 AM - 6:30 PM IST)</div>
               </div>
             </div>
-
-            <div>
-              <h4 style={{ fontSize: '1.05rem', fontWeight: 600, color: '#111827', marginBottom: 12 }}>Official Social Channels</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.9rem' }}>
-                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>📸 Instagram: @sabharwal_hospitality</a>
-                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>👥 Facebook: facebook.com/sabharwalhospitality</a>
-                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>💼 LinkedIn: linkedin.com/company/sabharwal-hospitality</a>
-              </div>
-            </div>
           </div>
           
           <div style={{ backgroundColor: 'white', borderRadius: 16, padding: 32, boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>

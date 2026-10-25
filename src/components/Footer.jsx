@@ -46,19 +46,6 @@ export default function Footer() {
                 <a href="mailto:support@hotelsabharwal.com" style={{ color: '#9CA3AF', textDecoration: 'none' }}>support@hotelsabharwal.com</a>
               </li>
             </ul>
-
-            <div style={{ marginTop: 20 }}>
-              <h5 style={{ fontSize: '0.85rem', color: '#E5E7EB', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Connect With Us</h5>
-              <div style={{ display: 'flex', gap: 14 }}>
-                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style={{ color: '#9CA3AF', textDecoration: 'none', transition: 'color 0.2s', fontSize: '0.85rem' }}>Instagram</a>
-                <span style={{ color: '#4B5563' }}>•</span>
-                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style={{ color: '#9CA3AF', textDecoration: 'none', transition: 'color 0.2s', fontSize: '0.85rem' }}>Facebook</a>
-                <span style={{ color: '#4B5563' }}>•</span>
-                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" style={{ color: '#9CA3AF', textDecoration: 'none', transition: 'color 0.2s', fontSize: '0.85rem' }}>LinkedIn</a>
-                <span style={{ color: '#4B5563' }}>•</span>
-                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter / X" style={{ color: '#9CA3AF', textDecoration: 'none', transition: 'color 0.2s', fontSize: '0.85rem' }}>Twitter (X)</a>
-              </div>
-            </div>
           </div>
         </div>
 
