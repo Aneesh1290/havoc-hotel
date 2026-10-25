@@ -1352,16 +1352,25 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
     setShowModal(true);
   };
 
-  const handleSubmit = (e) => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.location) return;
     
-    if (isEditing) {
-      updateProperty(formData.id, formData);
-    } else {
-      addProperty({ ...formData, roomsAvailable: 0 }); // Legacy fallback
+    setIsSaving(true);
+    try {
+      if (isEditing) {
+        await updateProperty(formData.id, formData);
+      } else {
+        await addProperty({ ...formData, roomsAvailable: 0 }); // Legacy fallback
+      }
+      setShowModal(false);
+    } catch (err) {
+      alert("Failed to save property changes: " + err.message);
+    } finally {
+      setIsSaving(false);
     }
-    setShowModal(false);
   };
 
   return (
@@ -1551,8 +1560,10 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid #D1D5DB', background: 'white', cursor: 'pointer' }}>Cancel</button>
-                <button type="submit" style={{ padding: '10px 20px', borderRadius: 8, backgroundColor: 'var(--primary)', color: 'white', border: 'none', cursor: 'pointer' }}>Save Property</button>
+                <button type="button" onClick={() => setShowModal(false)} disabled={isSaving} style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid #D1D5DB', background: 'white', cursor: isSaving ? 'not-allowed' : 'pointer' }}>Cancel</button>
+                <button type="submit" disabled={isSaving} style={{ padding: '10px 20px', borderRadius: 8, backgroundColor: 'var(--primary)', color: 'white', border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1 }}>
+                  {isSaving ? 'Saving...' : 'Save Property'}
+                </button>
               </div>
             </form>
           </div>
