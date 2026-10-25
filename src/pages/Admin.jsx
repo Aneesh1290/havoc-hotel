@@ -6,7 +6,7 @@ import {
   Archive, Users, CreditCard, FileText, Tag, Image as ImageIcon, 
   Settings, Search, Bell, Plus, Headset, CalendarCheck, Wallet, 
   PieChart, Users as UsersIcon, ArrowRight, MapPin, Edit2, Trash2, Check, X, MoreVertical,
-  Clock, CheckCircle, Mail, Send, Copy, Download, FileSpreadsheet, UserCheck, ShieldCheck, Key
+  Clock, CheckCircle, Mail, Send, Copy, Download, FileSpreadsheet, UserCheck, ShieldCheck, Key, Menu
 } from 'lucide-react';
 import { format, isSameDay, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
 import { exportCorporateHotelExcel } from '../utils/excelExporter';
@@ -168,75 +168,96 @@ export default function Admin() {
     ? rooms
     : rooms.filter(r => allowedPropIds.includes(r.propertyId));
 
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   return (
-    <div style={{ display: 'flex', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'var(--font-sans)', overflow: 'hidden' }}>
+    <div className="admin-container">
+      {/* Mobile Drawer Overlay */}
+      <div 
+        className={`admin-mobile-overlay ${mobileSidebarOpen ? 'open' : ''}`}
+        onClick={() => setMobileSidebarOpen(false)}
+      />
       
       {/* Sidebar */}
-      <aside style={{ width: 280, backgroundColor: '#0A192F', color: 'white', display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto' }}>
-        <div style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <aside className={`admin-sidebar ${mobileSidebarOpen ? 'open' : ''}`}>
+        <div style={{ padding: '24px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <img src="/logo.png" alt="Sabharwal Hospitality" style={{ height: 80 }} />
+            <img src="/logo.png" alt="Sabharwal Hospitality" style={{ height: 60 }} />
           </div>
+          <button 
+            className="admin-mobile-toggle"
+            onClick={() => setMobileSidebarOpen(false)}
+            style={{ backgroundColor: 'transparent', border: 'none', color: '#9CA3AF', padding: 4 }}
+          >
+            <X size={22} />
+          </button>
         </div>
         
-        <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+        <div style={{ padding: '20px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => { setActiveTab('dashboard'); setMobileSidebarOpen(false); }} />
           {isSuperAdmin && (
-            <NavItem icon={<ShieldCheck size={20} />} label="Staff & Permissions" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
+            <NavItem icon={<ShieldCheck size={20} />} label="Staff & Permissions" active={activeTab === 'users'} onClick={() => { setActiveTab('users'); setMobileSidebarOpen(false); }} />
           )}
-          <NavItem icon={<Users size={20} />} label="Registered Guests" active={activeTab === 'guests'} onClick={() => setActiveTab('guests')} />
-          <NavItem icon={<CalendarDays size={20} />} label="Bookings" active={activeTab === 'bookings'} onClick={() => setActiveTab('bookings')} />
-          <NavItem icon={<Building2 size={20} />} label="Properties" active={activeTab === 'properties'} onClick={() => setActiveTab('properties')} />
-          <NavItem icon={<BedDouble size={20} />} label="Rooms" active={activeTab === 'rooms'} onClick={() => setActiveTab('rooms')} />
-          <NavItem icon={<CreditCard size={20} />} label="Payments" active={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
-          <NavItem icon={<FileText size={20} />} label="Reports" active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
-          <NavItem icon={<Tag size={20} />} label="Offers & Packages" active={activeTab === 'offers'} onClick={() => setActiveTab('offers')} />
-          <NavItem icon={<Settings size={20} />} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
+          <NavItem icon={<Users size={20} />} label="Registered Guests" active={activeTab === 'guests'} onClick={() => { setActiveTab('guests'); setMobileSidebarOpen(false); }} />
+          <NavItem icon={<CalendarDays size={20} />} label="Bookings" active={activeTab === 'bookings'} onClick={() => { setActiveTab('bookings'); setMobileSidebarOpen(false); }} />
+          <NavItem icon={<Building2 size={20} />} label="Properties" active={activeTab === 'properties'} onClick={() => { setActiveTab('properties'); setMobileSidebarOpen(false); }} />
+          <NavItem icon={<BedDouble size={20} />} label="Rooms" active={activeTab === 'rooms'} onClick={() => { setActiveTab('rooms'); setMobileSidebarOpen(false); }} />
+          <NavItem icon={<CreditCard size={20} />} label="Payments" active={activeTab === 'payments'} onClick={() => { setActiveTab('payments'); setMobileSidebarOpen(false); }} />
+          <NavItem icon={<FileText size={20} />} label="Reports" active={activeTab === 'reports'} onClick={() => { setActiveTab('reports'); setMobileSidebarOpen(false); }} />
+          <NavItem icon={<Tag size={20} />} label="Offers & Packages" active={activeTab === 'offers'} onClick={() => { setActiveTab('offers'); setMobileSidebarOpen(false); }} />
+          <NavItem icon={<Settings size={20} />} label="Settings" active={activeTab === 'settings'} onClick={() => { setActiveTab('settings'); setMobileSidebarOpen(false); }} />
         </div>
-
-
       </aside>
 
       {/* Main Area */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      <main className="admin-main">
         
         {/* Header */}
-        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 40px', backgroundColor: '#F8F9FA' }}>
-          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#E5E7EB', padding: '8px 16px', borderRadius: 8, width: 400 }}>
-            <Search size={18} color="#6B7280" />
-            <input 
-              type="text" 
-              placeholder="Search bookings, guests, rooms..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ border: 'none', background: 'transparent', outline: 'none', marginLeft: 12, width: '100%', fontSize: '0.9rem' }}
-            />
-            <div style={{ backgroundColor: 'white', padding: '2px 8px', borderRadius: 4, fontSize: '0.75rem', color: '#6B7280' }}>/</div>
+        <header className="admin-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button 
+              className="admin-mobile-toggle"
+              onClick={() => setMobileSidebarOpen(true)}
+              aria-label="Open sidebar"
+            >
+              <Menu size={22} />
+            </button>
+            <div className="admin-search-box" style={{ display: 'flex', alignItems: 'center', backgroundColor: '#E5E7EB', padding: '8px 14px', borderRadius: 8, width: 320, maxWidth: '100%' }}>
+              <Search size={18} color="#6B7280" style={{ flexShrink: 0 }} />
+              <input 
+                type="text" 
+                placeholder="Search bookings, guests, rooms..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ border: 'none', background: 'transparent', outline: 'none', marginLeft: 10, width: '100%', fontSize: '0.85rem' }}
+              />
+              <div style={{ backgroundColor: 'white', padding: '2px 6px', borderRadius: 4, fontSize: '0.7rem', color: '#6B7280' }}>/</div>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-            <Link to="/" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500, fontSize: '0.9rem' }}>Go to Booking Site &rarr;</Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <Link to="/" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500, fontSize: '0.85rem', display: 'none', whiteSpace: 'nowrap' }} className="desktop-only">Go to Booking Site &rarr;</Link>
             <div style={{ position: 'relative', cursor: 'pointer' }}>
-              <Bell size={22} color="#4B5563" />
+              <Bell size={20} color="#4B5563" />
               <span style={{ position: 'absolute', top: -2, right: -2, width: 8, height: 8, backgroundColor: '#EF4444', borderRadius: '50%', border: '2px solid #F8F9FA' }}></span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '4px 8px', borderRadius: 8, transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F3F4F6'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'} onClick={() => { setProfileForm(adminProfile); setShowProfileEdit(true); }}>
-              <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundImage: `url(${adminProfile.image})`, backgroundSize: 'cover' }}></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '4px 8px', borderRadius: 8, transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F3F4F6'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'} onClick={() => { setProfileForm(adminProfile); setShowProfileEdit(true); }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundImage: `url(${adminProfile.image})`, backgroundSize: 'cover', flexShrink: 0 }}></div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#111827' }}>{adminProfile.name}</span>
-                <span style={{ fontSize: '0.8rem', color: '#6B7280' }}>
-                  {adminProfile.role} {!isSuperAdmin && `(${accessibleProperties.length} Hotel${accessibleProperties.length !== 1 ? 's' : ''})`}
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#111827', lineHeight: 1.2 }}>{adminProfile.name}</span>
+                <span style={{ fontSize: '0.75rem', color: '#6B7280' }}>
+                  {adminProfile.role}
                 </span>
               </div>
             </div>
-            <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', padding: '8px 12px', borderRadius: 6 }}>
+            <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', padding: '6px 10px', borderRadius: 6 }}>
               Logout
             </button>
           </div>
         </header>
 
         {/* Dynamic Content */}
-        <div style={{ padding: '0 40px 40px' }}>
+        <div className="admin-content-pad">
           {activeTab === 'dashboard' && <DashboardView setActiveTab={setActiveTab} properties={accessibleProperties} bookings={accessibleBookings} inventoryAlerts={inventoryAlerts} rooms={accessibleRooms} adminProfile={adminProfile} />}
           {activeTab === 'users' && <UsersManagementView properties={properties} />}
           {activeTab === 'guests' && <GuestsView />}
@@ -364,26 +385,26 @@ function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, ro
 
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32 }}>
+      <div className="admin-greeting-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <div style={{ fontSize: '0.8rem', fontWeight: 600, letterSpacing: 2, color: '#6B7280', textTransform: 'uppercase', marginBottom: 8 }}>Welcome Back</div>
-          <h1 style={{ fontSize: '2.5rem', fontFamily: 'var(--font-serif)', color: '#111827', margin: 0, lineHeight: 1.2 }}>{getGreeting()}, {adminProfile?.firstName || 'Aneesh'}</h1>
-          <p style={{ color: '#6B7280', fontSize: '1.05rem', margin: '8px 0 0' }}>Here's what's happening across your hotels today.</p>
+          <div style={{ fontSize: '0.8rem', fontWeight: 600, letterSpacing: 2, color: '#6B7280', textTransform: 'uppercase', marginBottom: 6 }}>Welcome Back</div>
+          <h1 style={{ fontSize: '2.3rem', fontFamily: 'var(--font-serif)', color: '#111827', margin: 0, lineHeight: 1.2 }}>{getGreeting()}, {adminProfile?.firstName || 'Aneesh'}</h1>
+          <p style={{ color: '#6B7280', fontSize: '0.98rem', margin: '6px 0 0' }}>Here's what's happening across your hotels today.</p>
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <button
             onClick={() => exportCorporateHotelExcel({ bookings, properties, rooms, filterHotel: 'all', filterDate: 'all' })}
             style={{
               backgroundColor: '#059669',
               color: 'white',
-              padding: '12px 20px',
+              padding: '10px 18px',
               borderRadius: 10,
               display: 'flex',
               alignItems: 'center',
               gap: 8,
               fontWeight: 600,
-              fontSize: '0.9rem',
+              fontSize: '0.88rem',
               border: 'none',
               cursor: 'pointer',
               boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
@@ -392,23 +413,23 @@ function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, ro
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#047857'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = '#059669'}
           >
-            <FileSpreadsheet size={18} /> Export Excel Report
+            <FileSpreadsheet size={16} /> Export Excel Report
           </button>
 
           <div 
-            style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', position: 'relative', padding: 8, borderRadius: 12, transition: 'background 0.2s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', position: 'relative', padding: 6, borderRadius: 10, transition: 'background 0.2s' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F3F4F6'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
             onClick={() => {
               try { document.getElementById('dash-date-picker').showPicker(); } catch(e) {}
             }}
           >
-            <div style={{ padding: 12, backgroundColor: 'white', borderRadius: 12, border: '1px solid #E5E7EB', display: 'flex' }}>
-              <CalendarCheck size={20} color="#111827" />
+            <div style={{ padding: 10, backgroundColor: 'white', borderRadius: 10, border: '1px solid #E5E7EB', display: 'flex' }}>
+              <CalendarCheck size={18} color="#111827" />
             </div>
             <div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#111827' }}>{format(today, 'EEEE, d MMM yyyy')}</div>
-              <div style={{ fontSize: '0.8rem', color: '#6B7280' }}>Click to select a different date.</div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#111827' }}>{format(today, 'EEEE, d MMM yyyy')}</div>
+              <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>Click to select a different date.</div>
             </div>
             <input 
               id="dash-date-picker"
@@ -423,7 +444,7 @@ function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, ro
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 24, marginBottom: 24 }}>
+      <div className="admin-properties-preview-grid">
         {properties.slice(0, 4).map((p, i) => {
           const pBookings = activeBookingsToday.filter(b => b.hotelId === p.id);
           const pOccRooms = pBookings.reduce((sum, b) => sum + (b.rooms || 1), 0);
@@ -439,7 +460,7 @@ function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, ro
           const col = colors[i % 4];
 
           return (
-            <div key={p.id} style={{ flex: 1, backgroundColor: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column' }}>
+            <div key={p.id} style={{ backgroundColor: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ height: 140, backgroundImage: `url(${p.image})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
                 <button
                   type="button"
@@ -484,21 +505,21 @@ function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, ro
                   <FileSpreadsheet size={14} /> Export Report
                 </button>
               </div>
-              <div style={{ padding: '18px 20px 20px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
+              <div style={{ padding: '16px 18px 18px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                     <div>
-                      <h4 style={{ margin: '0 0 6px', fontSize: '1.05rem', color: '#111827', fontWeight: 600 }}>{p.name}</h4>
+                      <h4 style={{ margin: '0 0 6px', fontSize: '1rem', color: '#111827', fontWeight: 600 }}>{p.name}</h4>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#6B7280', fontSize: '0.8rem' }}>
                         <MapPin size={12} /> {p.location}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>{pOccRate}%</div>
-                      <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>Occupancy</div>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#111827' }}>{pOccRate}%</div>
+                      <div style={{ fontSize: '0.72rem', color: '#6B7280' }}>Occupancy</div>
                     </div>
                   </div>
-                  <div style={{ width: '100%', height: 6, backgroundColor: '#F3F4F6', borderRadius: 3, overflow: 'hidden', marginBottom: 14 }}>
+                  <div style={{ width: '100%', height: 6, backgroundColor: '#F3F4F6', borderRadius: 3, overflow: 'hidden', marginBottom: 12 }}>
                     <div style={{ width: `${pOccRate}%`, height: '100%', backgroundColor: col, borderRadius: 3 }}></div>
                   </div>
                 </div>
@@ -521,7 +542,7 @@ function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, ro
                       background: 'none',
                       border: 'none',
                       color: '#059669',
-                      fontSize: '0.8rem',
+                      fontSize: '0.78rem',
                       fontWeight: 600,
                       display: 'flex',
                       alignItems: 'center',
@@ -541,47 +562,49 @@ function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, ro
         })}
       </div>
 
-      <div style={{ display: 'flex', gap: 24, marginBottom: 32 }}>
-        <MetricCard icon={<CalendarCheck size={24} color="#3B82F6" />} bg="#EFF6FF" title="Total Bookings" value={totalBookings} />
-        <MetricCard icon={<Wallet size={24} color="#10B981" />} bg="#ECFDF5" title="Total Revenue" value={`₹${totalRevenue.toLocaleString()}`} />
-        <MetricCard icon={<PieChart size={24} color="#F59E0B" />} bg="#FEF3C7" title="Occupancy Rate" value={`${occupancyRate}%`} />
-        <MetricCard icon={<UsersIcon size={24} color="#3B82F6" />} bg="#EFF6FF" title="New Customers" value={uniqueCustomers} />
+      <div className="admin-metric-grid">
+        <MetricCard icon={<CalendarCheck size={22} color="#3B82F6" />} bg="#EFF6FF" title="Total Bookings" value={totalBookings} />
+        <MetricCard icon={<Wallet size={22} color="#10B981" />} bg="#ECFDF5" title="Total Revenue" value={`₹${totalRevenue.toLocaleString()}`} />
+        <MetricCard icon={<PieChart size={22} color="#F59E0B" />} bg="#FEF3C7" title="Occupancy Rate" value={`${occupancyRate}%`} />
+        <MetricCard icon={<UsersIcon size={22} color="#3B82F6" />} bg="#EFF6FF" title="New Customers" value={uniqueCustomers} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24, marginBottom: 24 }}>
+      <div className="admin-two-col-grid">
         <DashboardCard title="Recent Bookings" action="View All" onAction={() => setActiveTab('bookings')}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-            <thead>
-              <tr style={{ color: '#6B7280', borderBottom: '1px solid #F3F4F6' }}>
-                <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Guest Name</th>
-                <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Hotel</th>
-                <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Dates</th>
-                <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Amount</th>
-                <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentBookingsList.map((b, i) => (
-                <tr key={i} style={{ borderBottom: i === recentBookingsList.length -1 ? 'none' : '1px solid #F3F4F6' }}>
-                  <td style={{ padding: '16px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, color: '#4B5563' }}>
-                      {b.name.charAt(0)}
-                    </div>
-                    <span style={{ fontWeight: 500, color: '#111827' }}>{b.name}</span>
-                  </td>
-                  <td style={{ padding: '16px 0', color: '#4B5563' }}>{b.hotel}</td>
-                  <td style={{ padding: '16px 0', color: '#4B5563' }}>{b.dates}</td>
-                  <td style={{ padding: '16px 0', fontWeight: 500, color: '#111827' }}>{b.amount}</td>
-                  <td style={{ padding: '16px 0' }}>
-                    <span style={{ padding: '6px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, color: b.statusColor, backgroundColor: b.statusBg }}>
-                      {b.status}
-                    </span>
-                  </td>
+          <div className="admin-table-responsive">
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ color: '#6B7280', borderBottom: '1px solid #F3F4F6' }}>
+                  <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Guest Name</th>
+                  <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Hotel</th>
+                  <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Dates</th>
+                  <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Amount</th>
+                  <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Status</th>
                 </tr>
-              ))}
-              {recentBookingsList.length === 0 && <tr><td colSpan="5" style={{padding: 20, textAlign: 'center', color: '#6B7280'}}>No bookings found.</td></tr>}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {recentBookingsList.map((b, i) => (
+                  <tr key={i} style={{ borderBottom: i === recentBookingsList.length -1 ? 'none' : '1px solid #F3F4F6' }}>
+                    <td style={{ padding: '16px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, color: '#4B5563' }}>
+                        {b.name.charAt(0)}
+                      </div>
+                      <span style={{ fontWeight: 500, color: '#111827' }}>{b.name}</span>
+                    </td>
+                    <td style={{ padding: '16px 0', color: '#4B5563' }}>{b.hotel}</td>
+                    <td style={{ padding: '16px 0', color: '#4B5563' }}>{b.dates}</td>
+                    <td style={{ padding: '16px 0', fontWeight: 500, color: '#111827' }}>{b.amount}</td>
+                    <td style={{ padding: '16px 0' }}>
+                      <span style={{ padding: '6px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, color: b.statusColor, backgroundColor: b.statusBg }}>
+                        {b.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {recentBookingsList.length === 0 && <tr><td colSpan="5" style={{padding: 20, textAlign: 'center', color: '#6B7280'}}>No bookings found.</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </DashboardCard>
 
         <DashboardCard title="Room Status" action="View All" onAction={() => setActiveTab('rooms')}>
@@ -1389,7 +1412,8 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
       </div>
 
       <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+        <div className="admin-table-responsive">
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead style={{ backgroundColor: '#F9FAFB' }}>
             <tr>
               <th style={thStyle}>Property Details</th>
@@ -1455,6 +1479,7 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       {showModal && (
