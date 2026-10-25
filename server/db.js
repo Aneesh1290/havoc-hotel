@@ -33,6 +33,19 @@ try {
 }
 const dbPath = path.join(dataDir, 'database.sqlite');
 console.log(`[Database] SQLite database location: ${dbPath}`);
+
+// If using an external persistent volume (e.g. /data) and it doesn't have database.sqlite yet,
+// seed it from the committed repository database so user data and setup are preserved
+const repoDbPath = path.join(__dirname, 'database.sqlite');
+if (dataDir !== __dirname && !fs.existsSync(dbPath) && fs.existsSync(repoDbPath)) {
+  try {
+    fs.copyFileSync(repoDbPath, dbPath);
+    console.log(`[Database] Initialized persistent database from ${repoDbPath}`);
+  } catch (err) {
+    console.warn(`[Database] Could not seed database to ${dbPath}: ${err.message}`);
+  }
+}
+
 export { dbPath, dataDir };
 const db = new Database(dbPath);
 
@@ -165,6 +178,11 @@ try {
 
 try {
   db.exec("ALTER TABLE admins ADD COLUMN allowedProperties TEXT DEFAULT '[]'");
+} catch (e) {}
+
+// Auto-migrate any legacy misspelled "Banglore" to "Bengaluru, Karnataka"
+try {
+  db.prepare("UPDATE properties SET location = 'Bengaluru, Karnataka' WHERE location = 'Banglore'").run();
 } catch (e) {}
 
 export default db;
