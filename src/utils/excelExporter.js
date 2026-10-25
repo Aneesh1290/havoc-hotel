@@ -256,7 +256,7 @@ function buildAllBookingsHotelWiseSheet(worksheet, bookingList, properties = [])
     worksheet.mergeCells(`A${hBannerNum}:L${hBannerNum}`);
     hotelBannerRow.height = 28;
     hotelBannerRow.getCell(1).font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFF' } };
-    hotelBannerRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    hotelBannerRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
     hotelBannerRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: hotelBannerBg } };
     for (let c = 1; c <= 12; c++) {
       hotelBannerRow.getCell(c).border = borderThin;
