@@ -2736,6 +2736,77 @@ function AdminCredentialsForm() {
   );
 }
 
+function StorageStatusCard() {
+  const [info, setInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/debug-storage')
+      .then(r => r.json())
+      .then(d => { setInfo(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const isPersistent = info?.envDATA_DIR || (info?.dbPath && info.dbPath.startsWith('/data'));
+
+  return (
+    <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 32, marginBottom: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#111827', margin: 0 }}>
+            Deployment Data Persistence
+          </h3>
+          <p style={{ color: '#6B7280', fontSize: '0.85rem', marginTop: 4 }}>
+            Status of permanent storage for hotel updates, photos, and bookings across redeployments.
+          </p>
+        </div>
+        <span style={{ 
+          padding: '6px 14px', 
+          borderRadius: 20, 
+          fontSize: '0.82rem', 
+          fontWeight: 600,
+          backgroundColor: isPersistent ? '#ECFDF5' : '#FEF3C7',
+          color: isPersistent ? '#065F46' : '#92400E',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6
+        }}>
+          {isPersistent ? '✓ Permanent Disk Active' : '⚠ Ephemeral Disk (Render Disk Not Attached)'}
+        </span>
+      </div>
+
+      <div style={{ backgroundColor: '#F9FAFB', borderRadius: 10, padding: 16, border: '1px solid #E5E7EB', fontSize: '0.85rem', color: '#4B5563', lineHeight: 1.6 }}>
+        {isPersistent ? (
+          <div>
+            <strong style={{ color: '#065F46' }}>Persistent Storage Configured:</strong>
+            <p style={{ margin: '4px 0 0' }}>
+              Database path: <code style={{ backgroundColor: '#EEF2FF', padding: '2px 6px', borderRadius: 4 }}>{info?.dbPath}</code><br/>
+              Uploads directory: <code style={{ backgroundColor: '#EEF2FF', padding: '2px 6px', borderRadius: 4 }}>{info?.uploadsDir}</code><br/>
+              All edits to properties, rooms, bookings, and locations remain permanent across every Git push and redeployment.
+            </p>
+          </div>
+        ) : (
+          <div>
+            <strong style={{ color: '#92400E' }}>Why locations or edits reset without a Persistent Disk:</strong>
+            <p style={{ margin: '4px 0 8px' }}>
+              Render/cloud containers destroy their filesystem on every code push unless a Persistent Disk is attached. Any edits you make in the dashboard are written to the container's temporary disk. When you push to Git, Render starts a fresh container with the files from Git, discarding temporary changes.
+            </p>
+            <strong style={{ color: '#111827' }}>How to make all dashboard edits permanent forever:</strong>
+            <ol style={{ margin: '6px 0 0', paddingLeft: 20 }}>
+              <li>Go to your Render Dashboard &rarr; Your Web Service &rarr; <strong>Disks</strong> &rarr; <strong>Add Disk</strong>.</li>
+              <li>Set <strong>Mount Path</strong> to: <code style={{ backgroundColor: '#E0E7FF', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>/data</code> (Size: 1 GB is plenty).</li>
+              <li>Or under <strong>Environment</strong>, add variable <code style={{ backgroundColor: '#E0E7FF', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>DATA_DIR=/data</code>.</li>
+            </ol>
+            <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
+              Once attached, the server automatically saves everything into <code style={{ backgroundColor: '#E5E7EB', padding: '2px 5px', borderRadius: 4 }}>/data/database.sqlite</code> so redeployments never wipe your edits.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SettingsView() {
   const { taxRate, updateTaxRate, bookingPolicies, updateBookingPolicies } = useHotels();
   const [localTaxRate, setLocalTaxRate] = useState(taxRate);
@@ -2777,6 +2848,9 @@ function SettingsView() {
         <h1 style={{ fontSize: '1.8rem', fontWeight: 600, color: '#111827', marginBottom: 4 }}>System Settings</h1>
         <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>Configure global application preferences, taxes, and guest self-service policies.</p>
       </div>
+
+      <StorageStatusCard />
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 32 }}>
         {/* General Settings */}
         <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 32 }}>
