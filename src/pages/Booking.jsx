@@ -124,6 +124,8 @@ export default function Booking() {
 
   // Final confirmation state
   const [confirmedBookingData, setConfirmedBookingData] = useState(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
   const [formData, setFormData] = useState(() => {
     try {
       const saved = localStorage.getItem('guestProfile');
@@ -385,10 +387,58 @@ export default function Booking() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleConfirmBooking = (e) => {
+  const handleConfirmBooking = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.email) return;
 
+    setPaymentError('');
+
+    // If online payment selected, initiate ICICI Bank Gateway session
+    if (paymentMethod === 'online') {
+      setPaymentProcessing(true);
+      try {
+        const primaryRoomId = Object.keys(selectedRooms).find(id => selectedRooms[id] > 0);
+        const res = await fetch('/api/payment/icici/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bookingDetails: {
+              name: formData.name.trim(),
+              email: formData.email.trim(),
+              phone: formData.phone ? formData.phone.trim() : '',
+              hotelId: property.id,
+              hotelName: property.name,
+              checkIn: checkIn.toISOString(),
+              checkOut: checkOut.toISOString(),
+              amount: totalPrice,
+              roomsCount: totalSelectedCount,
+              roomId: primaryRoomId || null,
+              adults: parseInt(guests.adults) || 1,
+              children: parseInt(guests.children) || 0,
+              notes: formData.description || ''
+            }
+          })
+        });
+
+        const data = await res.json();
+        if (data.success && data.paymentUrl) {
+          // Seamlessly forward guest to ICICI Bank payment portal
+          window.location.href = data.paymentUrl;
+          return;
+        } else {
+          setPaymentError(data.error || 'Could not connect to ICICI Payment Gateway. Please try again or choose Pay at Desk.');
+          setPaymentProcessing(false);
+          return;
+        }
+      } catch (err) {
+        console.error('ICICI PG Initiation error:', err);
+        setPaymentError('Network error connecting to payment gateway. Please try again or choose Pay at Desk.');
+        setPaymentProcessing(false);
+        return;
+      }
+    }
+
+    // Pay at Desk flow
     const summaryRooms = [];
     Object.entries(selectedRooms).forEach(([roomId, count]) => {
       if (count > 0) {
@@ -403,8 +453,8 @@ export default function Booking() {
           checkIn: checkIn.toISOString(),
           checkOut: checkOut.toISOString(),
           amount: Math.round(room.pricePerNight * nights * count * (1 + taxRate / 100) * (1 - couponDiscount)),
-          status: paymentMethod === 'online' ? 'Confirmed' : 'Confirmed (Pay at Desk)',
-          paymentMethod: paymentMethod === 'online' ? 'Online Gateway' : 'Pay at Desk',
+          status: 'Confirmed (Pay at Desk)',
+          paymentMethod: 'Pay at Desk',
           rooms: count,
           roomId: room.id,
           adults: parseInt(guests.adults) || 1,
@@ -843,32 +893,46 @@ export default function Booking() {
                   </div>
                 </div>
 
+                {paymentError && (
+                  <div style={{ backgroundColor: '#FEE2E2', border: '1px solid #FCA5A5', color: '#B91C1C', padding: '12px 14px', borderRadius: 10, fontSize: '0.85rem', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                    <span>{paymentError}</span>
+                  </div>
+                )}
+
                 {/* Confirm & Submit Button */}
                 <button
                   type="submit"
                   form="checkoutForm"
+                  disabled={paymentProcessing}
                   style={{
                     width: '100%',
                     padding: '16px',
                     borderRadius: 10,
                     border: 'none',
-                    backgroundColor: '#102641',
+                    backgroundColor: paymentProcessing ? '#475569' : '#102641',
                     color: '#FFFFFF',
                     fontWeight: 700,
                     fontSize: '1.05rem',
-                    cursor: 'pointer',
+                    cursor: paymentProcessing ? 'wait' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 10,
                     marginBottom: 20,
                     transition: 'all 0.2s',
-                    boxShadow: '0 4px 12px rgba(16, 38, 65, 0.25)'
+                    boxShadow: '0 4px 12px rgba(16, 38, 65, 0.25)',
+                    opacity: paymentProcessing ? 0.8 : 1
                   }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1A365D'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#102641'}
+                  onMouseEnter={e => { if (!paymentProcessing) e.currentTarget.style.backgroundColor = '#1A365D'; }}
+                  onMouseLeave={e => { if (!paymentProcessing) e.currentTarget.style.backgroundColor = '#102641'; }}
                 >
-                  <Lock size={18} /> Confirm Reservation — ₹{totalPrice.toLocaleString()}
+                  <Lock size={18} />
+                  {paymentProcessing 
+                    ? 'Connecting to ICICI Gateway...' 
+                    : paymentMethod === 'online'
+                      ? `Pay ₹${totalPrice.toLocaleString()} with ICICI Bank`
+                      : `Confirm Reservation — ₹${totalPrice.toLocaleString()}`}
                 </button>
 
                 {/* Payment Methods Badges Footer */}

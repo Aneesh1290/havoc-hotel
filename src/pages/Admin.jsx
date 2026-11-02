@@ -2224,9 +2224,16 @@ function PaymentsView({ bookings = [], properties = [] }) {
     }
 
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, fontSize: '0.8rem', fontWeight: 600, backgroundColor: '#EFF6FF', color: '#1E40AF', border: '1px solid #BFDBFE' }}>
-        <CreditCard size={13} /> Online Gateway (Razorpay/ICICI)
-      </span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, fontSize: '0.8rem', fontWeight: 600, backgroundColor: '#EFF6FF', color: '#1E40AF', border: '1px solid #BFDBFE' }}>
+          <CreditCard size={13} /> {b.paymentMethod || 'ICICI Orange PG'}
+        </span>
+        {b.txnId && (
+          <span style={{ fontSize: '0.72rem', color: '#6B7280', fontFamily: 'monospace' }}>
+            Txn: {b.txnId}
+          </span>
+        )}
+      </div>
     );
   };
 

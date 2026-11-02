@@ -169,6 +169,18 @@ try {
 } catch (e) {}
 
 try {
+  db.exec("ALTER TABLE bookings ADD COLUMN paymentMethod TEXT DEFAULT 'Pay at Desk'");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE bookings ADD COLUMN txnId TEXT");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE bookings ADD COLUMN iciciOrderId TEXT");
+} catch (e) {}
+
+try {
   db.exec("ALTER TABLE admins ADD COLUMN name TEXT");
 } catch (e) {}
 

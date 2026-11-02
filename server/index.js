@@ -7,12 +7,14 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import db, { dbPath, dataDir as dbDataDir } from './db.js';
 import { sendBookingConfirmationEmail, getMailTransporter } from './emailService.js';
+import { initiateSale, verifyCallbackHash, checkTransactionStatus, getConfig } from './iciciPgService.js';
 
 const JWT_SECRET = 'sabharwal_super_secret_key_2026'; // In production, use env var
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Diagnostic endpoint to check persistent disk status
 app.get('/api/debug-storage', (req, res) => {
@@ -399,11 +401,11 @@ app.get('/api/bookings', (req, res) => {
 });
 
 app.post('/api/bookings', async (req, res) => {
-  const { name, email, phone, hotelId, hotelName, checkIn, checkOut, amount, status, rooms, roomId, adults, children, notes } = req.body;
+  const { name, email, phone, hotelId, hotelName, checkIn, checkOut, amount, status, rooms, roomId, adults, children, notes, paymentMethod, txnId, iciciOrderId } = req.body;
   try {
     const stmt = db.prepare(`
-      INSERT INTO bookings (name, email, phone, hotelId, hotelName, checkIn, checkOut, amount, status, rooms, roomId, adults, children, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO bookings (name, email, phone, hotelId, hotelName, checkIn, checkOut, amount, status, rooms, roomId, adults, children, notes, paymentMethod, txnId, iciciOrderId)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const info = stmt.run(
       name, 
@@ -419,7 +421,10 @@ app.post('/api/bookings', async (req, res) => {
       roomId || null,
       adults || 1,
       children || 0,
-      notes || ''
+      notes || '',
+      paymentMethod || 'Pay at Desk',
+      txnId || null,
+      iciciOrderId || null
     );
 
     const bookingId = info.lastInsertRowid;
@@ -440,7 +445,8 @@ app.post('/api/bookings', async (req, res) => {
         rooms: rooms || 1,
         adults: adults || 1,
         children: children || 0,
-        notes: notes || ''
+        notes: notes || '',
+        paymentMethod: paymentMethod || 'Pay at Desk'
       }).catch(err => {
         console.error('[EmailService] Async email sending error:', err);
       });
@@ -449,6 +455,259 @@ app.post('/api/bookings', async (req, res) => {
     res.json({ success: true, id: bookingId });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Temporary memory store for pending online checkout sessions (ttl 30 mins)
+const pendingPayments = new Map();
+
+// --- ICICI BANK PAYMENT GATEWAY ENDPOINTS ---
+
+// 1. Get Payment Gateway status / config for frontend
+app.get('/api/payment/icici/config', (req, res) => {
+  try {
+    const cfg = getConfig();
+    res.json({
+      success: true,
+      enabled: true,
+      environment: cfg.env,
+      merchantId: cfg.mid
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. Initiate Online Payment with ICICI
+app.post('/api/payment/icici/initiate', async (req, res) => {
+  const { bookingDetails } = req.body;
+  if (!bookingDetails || !bookingDetails.amount || !bookingDetails.name || !bookingDetails.email) {
+    return res.status(400).json({ error: 'Missing required booking details for payment.' });
+  }
+
+  try {
+    // Generate unique merchantTxnNo (max 20 alphanumeric characters)
+    // Format: SBH + timestamp millis (e.g. SBH1730551234567)
+    const merchantTxnNo = `SBH${Date.now()}`;
+
+    // Construct return URL for ICICI callback
+    const host = req.get('host');
+    const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+    const returnURL = `${protocol}://${host}/api/payment/icici/callback`;
+
+    // Save pending transaction details
+    pendingPayments.set(merchantTxnNo, {
+      ...bookingDetails,
+      merchantTxnNo,
+      createdAt: Date.now()
+    });
+
+    // Cleanup old pending payments (> 1 hour)
+    const oneHourAgo = Date.now() - 3600000;
+    for (const [key, val] of pendingPayments.entries()) {
+      if (val.createdAt < oneHourAgo) pendingPayments.delete(key);
+    }
+
+    const saleResult = await initiateSale({
+      merchantTxnNo,
+      amount: bookingDetails.amount,
+      customerEmail: bookingDetails.email,
+      customerMobile: bookingDetails.phone || '',
+      customerName: bookingDetails.name,
+      returnURL,
+      addlParam1: bookingDetails.hotelName || 'Sabharwal Hotel',
+      addlParam2: bookingDetails.hotelId || ''
+    });
+
+    if (saleResult.success) {
+      res.json({
+        success: true,
+        paymentUrl: saleResult.paymentUrl,
+        tranCtx: saleResult.tranCtx,
+        merchantTxnNo
+      });
+    } else {
+      res.status(502).json({
+        success: false,
+        error: saleResult.error || 'Failed to initiate session with ICICI PG'
+      });
+    }
+  } catch (error) {
+    console.error('[ICICI-PG] Error in /api/payment/icici/initiate:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 3. Callback URL called by ICICI Bank after customer finishes payment
+app.post('/api/payment/icici/callback', async (req, res) => {
+  console.log('[ICICI-PG] Received callback from ICICI PG:', req.body);
+  const postParams = req.body || {};
+  const { responseCode, respDescription, merchantTxnNo, txnID, paymentID, amount, paymentMode } = postParams;
+
+  // Retrieve pending booking data
+  const pending = pendingPayments.get(merchantTxnNo);
+
+  const isHashValid = verifyCallbackHash(postParams);
+  console.log(`[ICICI-PG] Hash verification result: ${isHashValid ? 'VALID' : 'INVALID'}`);
+
+  const isSuccess = responseCode === '000' || responseCode === '0000' || responseCode === '0';
+
+  if (isSuccess) {
+    try {
+      // Create confirmed booking in database
+      const guestName = pending?.name || postParams.customerName || 'Guest';
+      const guestEmail = pending?.email || postParams.customerEmailID || '';
+      const guestPhone = pending?.phone || postParams.customerMobileNo || '';
+      const hotelId = pending?.hotelId || '1';
+      const hotelName = pending?.hotelName || 'Sabharwal Hotel';
+      const checkIn = pending?.checkIn || new Date().toISOString();
+      const checkOut = pending?.checkOut || new Date(Date.now() + 86400000).toISOString();
+      const finalAmount = Math.round(Number(amount || pending?.amount || 0));
+      const roomsCount = pending?.roomsCount || 1;
+      const roomId = pending?.roomId || null;
+      const adults = pending?.adults || 1;
+      const children = pending?.children || 0;
+      const notes = pending?.notes || '';
+
+      const stmt = db.prepare(`
+        INSERT INTO bookings (name, email, phone, hotelId, hotelName, checkIn, checkOut, amount, status, rooms, roomId, adults, children, notes, paymentMethod, txnId, iciciOrderId)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      const info = stmt.run(
+        guestName,
+        guestEmail,
+        guestPhone,
+        hotelId,
+        hotelName,
+        checkIn,
+        checkOut,
+        finalAmount,
+        'Confirmed (Paid Online)',
+        roomsCount,
+        roomId,
+        adults,
+        children,
+        notes,
+        `ICICI PG (${paymentMode || 'Card/UPI'})`,
+        txnID || null,
+        merchantTxnNo
+      );
+
+      const bookingId = info.lastInsertRowid;
+      pendingPayments.delete(merchantTxnNo);
+
+      // Trigger confirmation email
+      if (guestEmail) {
+        sendBookingConfirmationEmail({
+          id: bookingId,
+          name: guestName,
+          email: guestEmail,
+          phone: guestPhone,
+          hotelId,
+          hotelName,
+          checkIn,
+          checkOut,
+          amount: finalAmount,
+          status: 'Confirmed (Paid Online)',
+          rooms: roomsCount,
+          adults,
+          children,
+          notes,
+          paymentMethod: `ICICI PG (${paymentMode || 'Online'})`
+        }).catch(e => console.error('[EmailService] Async email error:', e));
+      }
+
+      // Render a friendly HTML receipt redirect page
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Payment Successful - Sabharwal Hospitality</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: 'Outfit', -apple-system, sans-serif; background: #F8FAFC; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+            .card { background: white; border-radius: 20px; border: 1px solid #E2E8F0; max-width: 520px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.08); overflow: hidden; text-align: center; }
+            .header { background: #102641; color: white; padding: 36px 24px; }
+            .icon-circle { width: 68px; height: 68px; border-radius: 50%; background: #10B981; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 34px; }
+            .title { font-size: 24px; font-weight: 700; margin: 0 0 6px; font-family: Georgia, serif; }
+            .body { padding: 32px 28px; text-align: left; }
+            .info-box { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px; margin-bottom: 24px; font-size: 14px; }
+            .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+            .info-label { color: #64748B; font-weight: 500; }
+            .info-val { font-weight: 700; color: #1E293B; }
+            .btn { display: block; width: 100%; padding: 14px; background: #102641; color: white; text-align: center; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 15px; box-sizing: border-box; transition: background 0.2s; }
+            .btn:hover { background: #1E3A8A; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="header">
+              <div class="icon-circle">✓</div>
+              <h1 class="title">Payment Successful!</h1>
+              <p style="margin: 0; color: #94A3B8; font-size: 14px;">Your reservation is confirmed via ICICI Payment Gateway</p>
+            </div>
+            <div class="body">
+              <div class="info-box">
+                <div class="info-row"><span class="info-label">Booking Reference</span><span class="info-val">SBH-${bookingId}</span></div>
+                <div class="info-row"><span class="info-label">ICICI Txn ID</span><span class="info-val">${txnID || merchantTxnNo}</span></div>
+                <div class="info-row"><span class="info-label">Guest Name</span><span class="info-val">${guestName}</span></div>
+                <div class="info-row"><span class="info-label">Hotel</span><span class="info-val">${hotelName}</span></div>
+                <div class="info-row" style="margin-bottom: 0; padding-top: 8px; border-top: 1px dashed #CBD5E1;"><span class="info-label">Amount Paid</span><span class="info-val" style="color: #059669; font-size: 16px;">₹${finalAmount.toLocaleString('en-IN')}</span></div>
+              </div>
+              <a href="/guest" class="btn">Go to Guest Dashboard &rarr;</a>
+              <div style="text-align: center; margin-top: 14px;">
+                <a href="/" style="color: #64748B; font-size: 13px; text-decoration: none;">&larr; Return to Homepage</a>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+    } catch (err) {
+      console.error('[ICICI-PG] Error processing successful payment:', err);
+      return res.status(500).send(`<h3>Error creating booking: ${err.message}</h3>`);
+    }
+  } else {
+    // Payment failed or cancelled
+    return res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Payment Unsuccessful - Sabharwal Hospitality</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body { font-family: 'Outfit', -apple-system, sans-serif; background: #F8FAFC; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+          .card { background: white; border-radius: 20px; border: 1px solid #E2E8F0; max-width: 480px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.08); overflow: hidden; text-align: center; padding: 36px 24px; }
+          .icon-circle { width: 68px; height: 68px; border-radius: 50%; background: #FEE2E2; color: #DC2626; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 34px; font-weight: bold; }
+          .title { font-size: 22px; font-weight: 700; color: #111827; margin: 0 0 8px; font-family: Georgia, serif; }
+          .desc { color: #64748B; font-size: 14px; margin: 0 0 24px; }
+          .btn { display: inline-block; padding: 12px 24px; background: #102641; color: white; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="icon-circle">✕</div>
+          <h1 class="title">Payment Not Completed</h1>
+          <p class="desc">${respDescription || 'The payment was not completed or was cancelled by user. No amount was debited.'}</p>
+          <a href="/hotels" class="btn">&larr; Try Again / Select Property</a>
+        </div>
+      </body>
+      </html>
+    `);
+  }
+});
+
+// 4. Manual Transaction Status Verification Endpoint
+app.get('/api/payment/icici/status/:merchantTxnNo', async (req, res) => {
+  try {
+    const statusResult = await checkTransactionStatus({
+      merchantTxnNo: req.params.merchantTxnNo
+    });
+    res.json(statusResult);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
