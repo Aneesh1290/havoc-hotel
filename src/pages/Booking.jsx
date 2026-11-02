@@ -420,7 +420,13 @@ export default function Booking() {
           })
         });
 
-        const data = await res.json();
+        let data;
+        try {
+          data = await res.json();
+        } catch (jsonErr) {
+          throw new Error(`Server returned unexpected response (${res.status} ${res.statusText})`);
+        }
+
         if (data.success && data.paymentUrl) {
           // Seamlessly forward guest to ICICI Bank payment portal
           window.location.href = data.paymentUrl;
@@ -432,7 +438,7 @@ export default function Booking() {
         }
       } catch (err) {
         console.error('ICICI PG Initiation error:', err);
-        setPaymentError('Network error connecting to payment gateway. Please try again or choose Pay at Desk.');
+        setPaymentError(err.message && !err.message.includes('Unexpected') ? err.message : 'Network error connecting to payment gateway. Please try again or choose Pay at Desk.');
         setPaymentProcessing(false);
         return;
       }
