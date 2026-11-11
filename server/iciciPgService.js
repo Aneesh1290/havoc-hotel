@@ -15,20 +15,20 @@ const ICICI_CONFIG = {
     statusCheckUrl: 'https://pgpayuat.icici.bank.in/tsp/pg/api/command'
   },
   prod: {
-    mid: process.env.ICICI_PG_MID,
-    key: process.env.ICICI_PG_KEY,
-    aggregatorId: process.env.ICICI_PG_AGGREGATOR_ID,
+    mid: process.env.ICICI_PG_MID || '100000000553633',
+    key: process.env.ICICI_PG_KEY || '55dfbecf-6429-4734-b62e-71225b25bbaa',
+    aggregatorId: process.env.ICICI_PG_AGGREGATOR_ID || '100000000553632',
     initiateSaleUrl: 'https://pgpay.icicibank.com/pg/api/v2/initiateSale',
     statusCheckUrl: 'https://pgpay.icicibank.com/pg/api/command'
   }
 };
 
 /**
- * Determine environment (default to 'uat' unless explicitly set to 'prod' or 'live')
+ * Determine environment (default to 'prod' for live payments unless explicitly set to 'uat')
  */
 export function getEnvironment() {
-  const env = (process.env.ICICI_PG_ENV || 'uat').toLowerCase();
-  return env === 'prod' || env === 'production' || env === 'live' ? 'prod' : 'uat';
+  const env = (process.env.ICICI_PG_ENV || 'prod').toLowerCase();
+  return env === 'uat' || env === 'test' ? 'uat' : 'prod';
 }
 
 /**
@@ -85,12 +85,13 @@ export async function initiateSale({
 }) {
   const cfg = getConfig();
 
-  // Formatted date string in YYYYMMDDHHMMSS (greater than current time, max 235959)
+  // Formatted date string in YYYYMMDDHHMMSS (current IST time)
   const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
-  const txnDate = `${yyyy}${mm}${dd}235959`;
+  const pad = n => String(n).padStart(2, '0');
+  // Format in IST (UTC + 5:30) or system local time
+  const istOffsetMs = 5.5 * 60 * 60 * 1000;
+  const ist = new Date(now.getTime() + istOffsetMs);
+  const txnDate = `${ist.getUTCFullYear()}${pad(ist.getUTCMonth() + 1)}${pad(ist.getUTCDate())}${pad(ist.getUTCHours())}${pad(ist.getUTCMinutes())}${pad(ist.getUTCSeconds())}`;
 
   const requestPayload = {
     merchantId: cfg.mid,
