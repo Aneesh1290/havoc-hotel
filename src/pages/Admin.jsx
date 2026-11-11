@@ -104,10 +104,10 @@ export default function Admin() {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif' }}>
         <div style={{ backgroundColor: 'white', padding: 40, borderRadius: 16, width: '100%', maxWidth: 400, boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <img src="/logo_dark.png" alt="Sabharwal Hospitality" style={{ height: 60, marginBottom: 16 }} />
+          <Link to="/" style={{ textAlign: 'center', marginBottom: 32, display: 'block', textDecoration: 'none' }} title="Back to Home">
+            <img src="/logo_dark.png" alt="Sabharwal Hospitality" style={{ height: 60, marginBottom: 16, cursor: 'pointer' }} />
             <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', margin: 0 }}>Admin Login</h2>
-          </div>
+          </Link>
           
           {loginError && (
             <div style={{ backgroundColor: '#FEE2E2', color: '#B91C1C', padding: '12px 16px', borderRadius: 8, fontSize: '0.875rem', marginBottom: 20 }}>
@@ -181,9 +181,9 @@ export default function Admin() {
       {/* Sidebar */}
       <aside className={`admin-sidebar ${mobileSidebarOpen ? 'open' : ''}`}>
         <div style={{ padding: '24px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <img src="/logo.png" alt="Sabharwal Hospitality" style={{ height: 60 }} />
-          </div>
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }} title="Back to Home">
+            <img src="/logo.png" alt="Sabharwal Hospitality" style={{ height: 60, cursor: 'pointer' }} />
+          </Link>
           <button 
             className="admin-mobile-toggle"
             onClick={() => setMobileSidebarOpen(false)}
