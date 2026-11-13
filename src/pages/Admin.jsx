@@ -1759,7 +1759,8 @@ function BookingsView({ bookings, properties = [], rooms = [], removeBooking, se
       </div>
 
       <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+        <div className="admin-table-responsive" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
+        <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead style={{ backgroundColor: '#F9FAFB' }}>
             <tr>
               <th style={thStyle}>Booking ID</th>
@@ -1823,6 +1824,7 @@ function BookingsView({ bookings, properties = [], rooms = [], removeBooking, se
             {filteredBookings.length === 0 && <tr><td colSpan="7" style={{padding: 40, textAlign: 'center'}}>No bookings found.</td></tr>}
           </tbody>
         </table>
+        </div>
       </div>
     </>
   );
@@ -2460,11 +2462,12 @@ function PaymentsView({ bookings = [], properties = [] }) {
 
       {activeSubTab === 'links' ? (
         <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>Generated Payment Links</h3>
             <span style={{ fontSize: '0.82rem', color: '#6B7280' }}>Share links directly with guests to collect payments via ICICI Bank</span>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <div className="admin-table-responsive" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
+          <table style={{ width: '100%', minWidth: 680, borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead style={{ backgroundColor: '#F9FAFB' }}>
               <tr>
                 <th style={thStyle}>Link ID</th>
@@ -2564,6 +2567,7 @@ function PaymentsView({ bookings = [], properties = [] }) {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       ) : (
         <>
@@ -2617,7 +2621,8 @@ function PaymentsView({ bookings = [], properties = [] }) {
       {/* Main Transactions Table (only if on transactions tab) */}
       {activeSubTab === 'transactions' && (
       <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+        <div className="admin-table-responsive" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
+        <table style={{ width: '100%', minWidth: 680, borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead style={{ backgroundColor: '#F9FAFB' }}>
             <tr>
               <th style={thStyle}>Date & Time</th>
@@ -2682,6 +2687,7 @@ function PaymentsView({ bookings = [], properties = [] }) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
       )}
 

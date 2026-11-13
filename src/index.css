@@ -1320,6 +1320,18 @@ button {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Custom modern scrollbar for admin tables on mobile */
+.admin-table-responsive::-webkit-scrollbar {
+  height: 6px;
+}
+.admin-table-responsive::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+.admin-table-responsive::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
 @media (max-width: 1024px) {
   .admin-two-col-grid {
     grid-template-columns: 1fr !important;
