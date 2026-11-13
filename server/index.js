@@ -554,7 +554,76 @@ app.post('/api/payment/icici/callback', async (req, res) => {
 
   if (isSuccess) {
     try {
-      // Create confirmed booking in database
+      // Check if this was a custom Payment Link
+      if (pending?.isPaymentLink) {
+        const linkId = pending.linkId;
+        const finalAmount = Math.round(Number(amount || pending?.amount || 0));
+        const paidAt = new Date().toISOString();
+
+        // Update payment_links table
+        db.prepare(`
+          UPDATE payment_links 
+          SET status = 'Paid', txnId = ?, paymentMode = ?, paidAt = ?
+          WHERE id = ?
+        `).run(txnID || merchantTxnNo, paymentMode || 'Online', paidAt, linkId);
+
+        // If this link was tied to an existing booking, update the booking status too
+        if (pending.bookingId) {
+          db.prepare(`
+            UPDATE bookings 
+            SET status = 'Confirmed (Paid Online)', paymentMethod = ?, txnId = ?
+            WHERE id = ?
+          `).run(`ICICI PG (${paymentMode || 'Card/UPI'})`, txnID || merchantTxnNo, pending.bookingId);
+        }
+
+        pendingPayments.delete(merchantTxnNo);
+
+        return res.send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Payment Successful - Sabharwal Hospitality</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+              body { font-family: 'Outfit', -apple-system, sans-serif; background: #F8FAFC; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+              .card { background: white; border-radius: 20px; border: 1px solid #E2E8F0; max-width: 520px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.08); overflow: hidden; text-align: center; }
+              .header { background: #102641; color: white; padding: 36px 24px; }
+              .icon-circle { width: 68px; height: 68px; border-radius: 50%; background: #10B981; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 34px; }
+              .title { font-size: 24px; font-weight: 700; margin: 0 0 6px; font-family: Georgia, serif; }
+              .body { padding: 32px 28px; text-align: left; }
+              .info-box { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px; margin-bottom: 24px; font-size: 14px; }
+              .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+              .info-label { color: #64748B; font-weight: 500; }
+              .info-val { font-weight: 700; color: #1E293B; }
+              .btn { display: block; width: 100%; padding: 14px; background: #102641; color: white; text-align: center; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 15px; box-sizing: border-box; transition: background 0.2s; }
+              .btn:hover { background: #1E3A8A; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div class="header">
+                <div class="icon-circle">✓</div>
+                <h1 class="title">Payment Successful!</h1>
+                <p style="margin: 0; color: #94A3B8; font-size: 14px;">Thank you! Your payment has been received via ICICI Bank.</p>
+              </div>
+              <div class="body">
+                <div class="info-box">
+                  <div class="info-row"><span class="info-label">Payment ID</span><span class="info-val">${linkId}</span></div>
+                  <div class="info-row"><span class="info-label">ICICI Txn ID</span><span class="info-val">${txnID || merchantTxnNo}</span></div>
+                  <div class="info-row"><span class="info-label">Payer Name</span><span class="info-val">${pending.name}</span></div>
+                  <div class="info-row"><span class="info-label">Hotel / Purpose</span><span class="info-val">${pending.purpose || pending.hotelName}</span></div>
+                  <div class="info-row" style="margin-bottom: 0; padding-top: 8px; border-top: 1px dashed #CBD5E1;"><span class="info-label">Amount Paid</span><span class="info-val" style="color: #059669; font-size: 16px;">₹${finalAmount.toLocaleString('en-IN')}</span></div>
+                </div>
+                <a href="/" class="btn">Return to Homepage &rarr;</a>
+              </div>
+            </div>
+          </body>
+          </html>
+        `);
+      }
+
+      // Standard booking flow
       const guestName = pending?.name || postParams.customerName || 'Guest';
       const guestEmail = pending?.email || postParams.customerEmailID || '';
       const guestPhone = pending?.phone || postParams.customerMobileNo || '';
@@ -707,6 +776,147 @@ app.get('/api/payment/icici/status/:merchantTxnNo', async (req, res) => {
     });
     res.json(statusResult);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- PAYMENT LINKS ENDPOINTS ---
+
+// Create a new Payment Link
+app.post('/api/payment-links', (req, res) => {
+  try {
+    const {
+      bookingId,
+      customerName,
+      customerEmail,
+      customerPhone,
+      hotelId,
+      hotelName,
+      amount,
+      purpose
+    } = req.body;
+
+    if (!customerName || !amount || Number(amount) <= 0) {
+      return res.status(400).json({ error: 'Customer name and valid amount are required.' });
+    }
+
+    const linkId = 'PL' + Date.now() + Math.random().toString(36).substring(2, 6).toUpperCase();
+
+    const stmt = db.prepare(`
+      INSERT INTO payment_links (id, bookingId, customerName, customerEmail, customerPhone, hotelId, hotelName, amount, purpose, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')
+    `);
+
+    stmt.run(
+      linkId,
+      bookingId || null,
+      customerName.trim(),
+      customerEmail ? customerEmail.trim() : '',
+      customerPhone ? customerPhone.trim() : '',
+      hotelId || null,
+      hotelName || 'Sabharwal Hotel',
+      Number(amount),
+      purpose ? purpose.trim() : 'Hotel Accommodation / Services Payment'
+    );
+
+    const host = req.get('host');
+    const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+    const paymentUrl = `${protocol}://${host}/pay/${linkId}`;
+
+    res.json({
+      success: true,
+      linkId,
+      paymentUrl,
+      customerName,
+      amount: Number(amount)
+    });
+  } catch (err) {
+    console.error('[PaymentLinks] Error creating link:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// List all Payment Links
+app.get('/api/payment-links', (req, res) => {
+  try {
+    const links = db.prepare('SELECT * FROM payment_links ORDER BY createdAt DESC').all();
+    res.json({ success: true, links });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get single Payment Link details by ID
+app.get('/api/payment-links/:linkId', (req, res) => {
+  try {
+    const link = db.prepare('SELECT * FROM payment_links WHERE id = ?').get(req.params.linkId);
+    if (!link) {
+      return res.status(404).json({ error: 'Payment link not found or expired.' });
+    }
+    res.json({ success: true, link });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Initiate ICICI payment session specifically for a Payment Link
+app.post('/api/payment-links/:linkId/pay', async (req, res) => {
+  try {
+    const link = db.prepare('SELECT * FROM payment_links WHERE id = ?').get(req.params.linkId);
+    if (!link) {
+      return res.status(404).json({ error: 'Payment link not found.' });
+    }
+    if (link.status === 'Paid') {
+      return res.status(400).json({ error: 'This payment link has already been paid.' });
+    }
+
+    const merchantTxnNo = `PL${Date.now()}`;
+    const host = req.get('host');
+    const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+    const returnURL = `${protocol}://${host}/api/payment/icici/callback`;
+
+    // Save pending payment info with isPaymentLink flag
+    pendingPayments.set(merchantTxnNo, {
+      isPaymentLink: true,
+      linkId: link.id,
+      bookingId: link.bookingId,
+      name: link.customerName,
+      email: link.customerEmail,
+      phone: link.customerPhone,
+      hotelId: link.hotelId,
+      hotelName: link.hotelName,
+      amount: link.amount,
+      purpose: link.purpose,
+      merchantTxnNo,
+      createdAt: Date.now()
+    });
+
+    const saleResult = await initiateSale({
+      merchantTxnNo,
+      amount: link.amount,
+      customerEmail: link.customerEmail,
+      customerMobile: link.customerPhone || '',
+      customerName: link.customerName,
+      returnURL,
+      addlParam1: link.hotelName || 'Sabharwal Hotel',
+      addlParam2: link.id
+    });
+
+    if (saleResult.success) {
+      res.json({
+        success: true,
+        paymentUrl: saleResult.paymentUrl,
+        tranCtx: saleResult.tranCtx,
+        merchantTxnNo
+      });
+    } else {
+      res.status(502).json({
+        success: false,
+        error: saleResult.error || 'Failed to initiate ICICI PG payment.'
+      });
+    }
+  } catch (err) {
+    console.error('[PaymentLinks] Pay error:', err);
     res.status(500).json({ error: err.message });
   }
 });

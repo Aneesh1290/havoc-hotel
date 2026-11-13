@@ -112,6 +112,23 @@ db.exec(`
     password TEXT NOT NULL,
     createdAt TEXT DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS payment_links (
+    id TEXT PRIMARY KEY,
+    bookingId INTEGER,
+    customerName TEXT NOT NULL,
+    customerEmail TEXT,
+    customerPhone TEXT,
+    hotelId TEXT,
+    hotelName TEXT,
+    amount REAL NOT NULL,
+    purpose TEXT,
+    status TEXT DEFAULT 'Pending',
+    txnId TEXT,
+    paymentMode TEXT,
+    paidAt TEXT,
+    createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 // Purge any automatic test dummy offers

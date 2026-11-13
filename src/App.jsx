@@ -8,6 +8,7 @@ import Hotels from './pages/Hotels';
 import Offers from './pages/Offers';
 import Contact from './pages/Contact';
 import GuestDashboard from './pages/GuestDashboard';
+import PayLink from './pages/PayLink';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsConditions from './pages/TermsConditions';
 import CancellationPolicy from './pages/CancellationPolicy';
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/offers" element={<Offers />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/guest" element={<GuestDashboard />} />
+        <Route path="/pay/:linkId" element={<PayLink />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsConditions />} />
         <Route path="/cancellation" element={<CancellationPolicy />} />

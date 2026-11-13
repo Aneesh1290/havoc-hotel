@@ -6,7 +6,7 @@ import {
   Archive, Users, CreditCard, FileText, Tag, Image as ImageIcon, 
   Settings, Search, Bell, Plus, Headset, CalendarCheck, Wallet, 
   PieChart, Users as UsersIcon, ArrowRight, MapPin, Edit2, Trash2, Check, X, MoreVertical,
-  Clock, CheckCircle, Mail, Send, Copy, Download, FileSpreadsheet, UserCheck, ShieldCheck, Key, Menu
+  Clock, CheckCircle, Mail, Send, Copy, Download, FileSpreadsheet, UserCheck, ShieldCheck, Key, Menu, Link2, ExternalLink
 } from 'lucide-react';
 import { format, isSameDay, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
 import { exportCorporateHotelExcel } from '../utils/excelExporter';
@@ -1686,6 +1686,43 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
 }
 
 function BookingsView({ bookings, properties = [], rooms = [], removeBooking, searchQuery = '' }) {
+  const [copiedBookingId, setCopiedBookingId] = useState(null);
+  const [generatingForId, setGeneratingForId] = useState(null);
+
+  const handleGenerateBookingLink = async (booking) => {
+    setGeneratingForId(booking.id);
+    try {
+      const res = await fetch('/api/payment-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId: booking.id,
+          customerName: booking.name,
+          customerEmail: booking.email,
+          customerPhone: booking.phone,
+          hotelId: booking.hotelId,
+          hotelName: booking.hotelName,
+          amount: booking.amount,
+          purpose: `Room Reservation #${String(booking.id).slice(0, 8)} (${booking.hotelName})`
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.paymentUrl) {
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(data.paymentUrl);
+          setCopiedBookingId(booking.id);
+          setTimeout(() => setCopiedBookingId(null), 3000);
+        }
+      } else {
+        alert(data.error || 'Failed to create payment link.');
+      }
+    } catch (err) {
+      alert('Error creating payment link for booking.');
+    } finally {
+      setGeneratingForId(null);
+    }
+  };
+
   const filteredBookings = bookings.filter(b => {
     const q = searchQuery.toLowerCase();
     return b.name.toLowerCase().includes(q) || 
@@ -1749,7 +1786,31 @@ function BookingsView({ bookings, properties = [], rooms = [], removeBooking, se
                     {b.status}
                   </span>
                 </td>
-                <td style={{ ...tdStyle, textAlign: 'right' }}>
+                <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {(!b.paymentMethod || b.paymentMethod.toLowerCase().includes('desk') || (b.status && b.status.includes('Pay at Desk'))) && (
+                    <button
+                      onClick={() => handleGenerateBookingLink(b)}
+                      disabled={generatingForId === b.id}
+                      title="Copy online payment link for this guest"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        marginRight: 8,
+                        padding: '6px 10px',
+                        borderRadius: 6,
+                        border: copiedBookingId === b.id ? '1px solid #10B981' : '1px solid #D1D5DB',
+                        backgroundColor: copiedBookingId === b.id ? '#ECFDF5' : '#F3F4F6',
+                        color: copiedBookingId === b.id ? '#059669' : '#374151',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        cursor: generatingForId === b.id ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {copiedBookingId === b.id ? <Check size={13} /> : <Link2 size={13} />}
+                      {copiedBookingId === b.id ? 'Link Copied!' : generatingForId === b.id ? 'Generating...' : 'Payment Link'}
+                    </button>
+                  )}
                   <button 
                     onClick={() => { if (window.confirm('Delete this booking?')) removeBooking(b.id); }}
                     style={{ color: '#EF4444', background: 'none', border: 'none', padding: 8, cursor: 'pointer' }}
@@ -2178,6 +2239,90 @@ function RoomsView({ properties, rooms, addRoomType, removeRoomType, updateRoomT
 function PaymentsView({ bookings = [], properties = [] }) {
   const [filterMethod, setFilterMethod] = useState('all');
   const [filterHotel, setFilterHotel] = useState('all');
+  const [activeSubTab, setActiveSubTab] = useState('transactions'); // 'transactions' | 'links'
+  const [paymentLinks, setPaymentLinks] = useState([]);
+  const [loadingLinks, setLoadingLinks] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
+  const [linkForm, setLinkForm] = useState({
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    hotelId: properties[0]?.id || '',
+    amount: '',
+    purpose: ''
+  });
+
+  const fetchPaymentLinks = async () => {
+    setLoadingLinks(true);
+    try {
+      const res = await fetch('/api/payment-links');
+      const data = await res.json();
+      if (data.success && data.links) {
+        setPaymentLinks(data.links);
+      }
+    } catch (e) {
+      console.error('Failed to fetch payment links:', e);
+    } finally {
+      setLoadingLinks(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPaymentLinks();
+  }, []);
+
+  const handleCreateLink = async (e) => {
+    e.preventDefault();
+    if (!linkForm.customerName || !linkForm.amount) return;
+
+    setCreating(true);
+    try {
+      const selectedProp = properties.find(p => p.id === linkForm.hotelId);
+      const res = await fetch('/api/payment-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...linkForm,
+          hotelName: selectedProp ? selectedProp.name : 'Hotel Sabharwal Grand',
+          amount: Number(linkForm.amount)
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowCreateModal(false);
+        setLinkForm({
+          customerName: '',
+          customerEmail: '',
+          customerPhone: '',
+          hotelId: properties[0]?.id || '',
+          amount: '',
+          purpose: ''
+        });
+        fetchPaymentLinks();
+        // Automatically copy generated link
+        if (navigator.clipboard && data.paymentUrl) {
+          navigator.clipboard.writeText(data.paymentUrl);
+          alert('Payment link created and copied to clipboard!\n\n' + data.paymentUrl);
+        }
+      } else {
+        alert(data.error || 'Failed to create payment link.');
+      }
+    } catch (err) {
+      alert('Error creating payment link.');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const copyToClipboard = (url, id) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2500);
+    }
+  };
 
   // Compute summary stats
   const totalReceived = bookings.reduce((sum, b) => {
@@ -2250,57 +2395,400 @@ function PaymentsView({ bookings = [], properties = [] }) {
 
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#111827', margin: '0 0 4px', fontFamily: 'var(--font-serif)' }}>Payments & Transactions</h1>
-          <p style={{ color: '#6B7280', fontSize: '0.95rem', margin: 0 }}>Review verified transactions, online payment gateway collections, and front-desk dues.</p>
+          <p style={{ color: '#6B7280', fontSize: '0.95rem', margin: 0 }}>Review verified transactions, create & share payment links, and manage collections.</p>
         </div>
 
-        {/* Filter Toolbar */}
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <select 
-            value={filterHotel} 
-            onChange={e => setFilterHotel(e.target.value)}
-            style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #D1D5DB', backgroundColor: 'white', fontSize: '0.88rem', color: '#111827', fontWeight: 500, outline: 'none' }}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: '#D97706',
+              color: 'white',
+              padding: '9px 16px',
+              borderRadius: 8,
+              fontWeight: 600,
+              fontSize: '0.88rem',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(217, 119, 6, 0.25)'
+            }}
           >
-            <option value="all">All Hotels</option>
-            {properties.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-
-          <select 
-            value={filterMethod} 
-            onChange={e => setFilterMethod(e.target.value)}
-            style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #D1D5DB', backgroundColor: 'white', fontSize: '0.88rem', color: '#111827', fontWeight: 500, outline: 'none' }}
-          >
-            <option value="all">All Methods</option>
-            <option value="online">Online Gateway</option>
-            <option value="desk">Pay at Desk</option>
-          </select>
+            <Plus size={16} /> Create Payment Link
+          </button>
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, marginBottom: 28 }}>
-        <div style={{ backgroundColor: 'white', borderRadius: 12, padding: '20px 24px', border: '1px solid #E5E7EB', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Transaction Volume</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#111827', marginTop: 8 }}>₹{totalReceived.toLocaleString()}</div>
-          <div style={{ fontSize: '0.8rem', color: '#059669', marginTop: 4 }}>Across {bookings.length} reservations</div>
-        </div>
-
-        <div style={{ backgroundColor: 'white', borderRadius: 12, padding: '20px 24px', border: '1px solid #E5E7EB', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Online Gateway</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1E40AF', marginTop: 8 }}>{onlineTransactions.length}</div>
-          <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: 4 }}>UPI, Cards & Netbanking</div>
-        </div>
-
-        <div style={{ backgroundColor: 'white', borderRadius: 12, padding: '20px 24px', border: '1px solid #E5E7EB', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Front Desk Collection</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#D97706', marginTop: 8 }}>{deskTransactions.length}</div>
-          <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: 4 }}>Pay upon check-in</div>
-        </div>
+      {/* Sub tabs: Transactions vs Payment Links */}
+      <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid #E5E7EB', marginBottom: 24 }}>
+        <button
+          onClick={() => setActiveSubTab('transactions')}
+          style={{
+            padding: '10px 18px',
+            fontSize: '0.9rem',
+            fontWeight: 600,
+            border: 'none',
+            background: 'none',
+            color: activeSubTab === 'transactions' ? '#1E40AF' : '#6B7280',
+            borderBottom: activeSubTab === 'transactions' ? '2px solid #1E40AF' : '2px solid transparent',
+            cursor: 'pointer'
+          }}
+        >
+          All Transactions ({bookings.length})
+        </button>
+        <button
+          onClick={() => setActiveSubTab('links')}
+          style={{
+            padding: '10px 18px',
+            fontSize: '0.9rem',
+            fontWeight: 600,
+            border: 'none',
+            background: 'none',
+            color: activeSubTab === 'links' ? '#1E40AF' : '#6B7280',
+            borderBottom: activeSubTab === 'links' ? '2px solid #1E40AF' : '2px solid transparent',
+            cursor: 'pointer'
+          }}
+        >
+          Payment Links ({paymentLinks.length})
+        </button>
       </div>
+
+      {activeSubTab === 'links' ? (
+        <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>Generated Payment Links</h3>
+            <span style={{ fontSize: '0.82rem', color: '#6B7280' }}>Share links directly with guests to collect payments via ICICI Bank</span>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead style={{ backgroundColor: '#F9FAFB' }}>
+              <tr>
+                <th style={thStyle}>Link ID</th>
+                <th style={thStyle}>Guest Details</th>
+                <th style={thStyle}>Hotel / Purpose</th>
+                <th style={thStyle}>Amount</th>
+                <th style={thStyle}>Status</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paymentLinks.map((pl, idx) => {
+                const linkUrl = `${window.location.origin}/pay/${pl.id}`;
+                const isPaid = pl.status === 'Paid';
+                const isCopied = copiedId === pl.id;
+
+                return (
+                  <tr key={pl.id} style={{ borderBottom: idx === paymentLinks.length - 1 ? 'none' : '1px solid #E5E7EB' }}>
+                    <td style={{ ...tdStyle, fontFamily: 'monospace', fontWeight: 600, color: '#4B5563', fontSize: '0.85rem' }}>
+                      {pl.id}
+                    </td>
+                    <td style={tdStyle}>
+                      <div style={{ fontWeight: 600, color: '#111827' }}>{pl.customerName}</div>
+                      <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
+                        {[pl.customerPhone, pl.customerEmail].filter(Boolean).join(' • ') || 'No contact provided'}
+                      </div>
+                    </td>
+                    <td style={tdStyle}>
+                      <div style={{ fontWeight: 500, color: '#374151', fontSize: '0.88rem' }}>{pl.hotelName || 'Sabharwal Hotel'}</div>
+                      <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>{pl.purpose || 'Hotel Accommodation'}</div>
+                    </td>
+                    <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>
+                        ₹{Number(pl.amount).toLocaleString('en-IN')}
+                      </span>
+                    </td>
+                    <td style={tdStyle}>
+                      {isPaid ? (
+                        <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, color: '#059669', backgroundColor: '#ECFDF5' }}>
+                          Paid Online
+                        </span>
+                      ) : (
+                        <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, color: '#D97706', backgroundColor: '#FEF3C7' }}>
+                          Pending Payment
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <button
+                        onClick={() => copyToClipboard(linkUrl, pl.id)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '6px 12px',
+                          borderRadius: 6,
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          backgroundColor: isCopied ? '#ECFDF5' : '#F3F4F6',
+                          color: isCopied ? '#059669' : '#374151',
+                          border: isCopied ? '1px solid #A7F3D0' : '1px solid #D1D5DB',
+                          cursor: 'pointer',
+                          marginRight: 8
+                        }}
+                      >
+                        {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                        {isCopied ? 'Copied!' : 'Copy Link'}
+                      </button>
+                      <a
+                        href={`/pay/${pl.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Open payment page"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '6px 8px',
+                          borderRadius: 6,
+                          color: '#6B7280',
+                          backgroundColor: '#F3F4F6',
+                          border: '1px solid #D1D5DB',
+                          textDecoration: 'none'
+                        }}
+                      >
+                        <ExternalLink size={14} />
+                      </a>
+                    </td>
+                  </tr>
+                );
+              })}
+              {paymentLinks.length === 0 && (
+                <tr>
+                  <td colSpan="6" style={{ padding: '48px 24px', textAlign: 'center', color: '#6B7280' }}>
+                    No payment links created yet. Click "+ Create Payment Link" above to send a payment link to a guest.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <>
+          {/* Filter Toolbar */}
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+            <select 
+              value={filterHotel} 
+              onChange={e => setFilterHotel(e.target.value)}
+              style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #D1D5DB', backgroundColor: 'white', fontSize: '0.88rem', color: '#111827', fontWeight: 500, outline: 'none' }}
+            >
+              <option value="all">All Hotels</option>
+              {properties.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+
+            <select 
+              value={filterMethod} 
+              onChange={e => setFilterMethod(e.target.value)}
+              style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #D1D5DB', backgroundColor: 'white', fontSize: '0.88rem', color: '#111827', fontWeight: 500, outline: 'none' }}
+            >
+              <option value="all">All Methods</option>
+              <option value="online">Online Gateway</option>
+              <option value="desk">Pay at Desk</option>
+            </select>
+          </div>
+
+          {/* Metrics Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, marginBottom: 28 }}>
+            <div style={{ backgroundColor: 'white', borderRadius: 12, padding: '20px 24px', border: '1px solid #E5E7EB', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Transaction Volume</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#111827', marginTop: 8 }}>₹{totalReceived.toLocaleString()}</div>
+              <div style={{ fontSize: '0.8rem', color: '#059669', marginTop: 4 }}>Across {bookings.length} reservations</div>
+            </div>
+
+            <div style={{ backgroundColor: 'white', borderRadius: 12, padding: '20px 24px', border: '1px solid #E5E7EB', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Online Gateway</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1E40AF', marginTop: 8 }}>{onlineTransactions.length}</div>
+              <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: 4 }}>UPI, Cards & Netbanking</div>
+            </div>
+
+            <div style={{ backgroundColor: 'white', borderRadius: 12, padding: '20px 24px', border: '1px solid #E5E7EB', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Front Desk Collection</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#D97706', marginTop: 8 }}>{deskTransactions.length}</div>
+              <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: 4 }}>Pay upon check-in</div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Main Transactions Table (only if on transactions tab) */}
+      {activeSubTab === 'transactions' && (
+      <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <thead style={{ backgroundColor: '#F9FAFB' }}>
+            <tr>
+              <th style={thStyle}>Date & Time</th>
+              <th style={thStyle}>Transaction / Order ID</th>
+              <th style={thStyle}>Guest & Hotel</th>
+              <th style={thStyle}>Amount</th>
+              <th style={thStyle}>Payment Channel</th>
+              <th style={{ ...thStyle, textAlign: 'right' }}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredBookings.map((b, idx) => {
+              let displayDate = '-';
+              if (b.checkIn) {
+                try {
+                  displayDate = format(parseISO(b.checkIn), 'dd MMM yyyy, HH:mm');
+                } catch (e) {
+                  displayDate = b.checkIn;
+                }
+              }
+
+              // Compute clean order reference
+              const orderId = b.id ? (b.id.toString().startsWith('#') ? b.id : `#ORD_${b.id.toString().substring(0, 8)}`) : `#ORD_${idx + 101}`;
+
+              return (
+                <tr key={b.id || idx} style={{ borderBottom: idx === filteredBookings.length - 1 ? 'none' : '1px solid #E5E7EB' }}>
+                  <td style={{ ...tdStyle, color: '#4B5563', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontWeight: 500, color: '#111827' }}>{displayDate}</div>
+                    <div style={{ fontSize: '0.78rem', color: '#9CA3AF' }}>Check-in Scheduled</div>
+                  </td>
+                  <td style={tdStyle}>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#374151', fontSize: '0.88rem', backgroundColor: '#F3F4F6', padding: '3px 8px', borderRadius: 6 }}>
+                      {orderId}
+                    </span>
+                  </td>
+                  <td style={tdStyle}>
+                    <div style={{ fontWeight: 600, color: '#111827' }}>{b.name || 'Guest'}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: 2 }}>
+                      {b.hotelName || 'Sabharwal Hotel'} {b.rooms ? `• ${b.rooms} Room(s)` : ''}
+                    </div>
+                  </td>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>
+                      ₹{(b.amount || 0).toLocaleString()}
+                    </span>
+                  </td>
+                  <td style={tdStyle}>
+                    {getMethodBadge(b)}
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: 'right' }}>
+                    {getStatusBadge(b.status)}
+                  </td>
+                </tr>
+              );
+            })}
+            {filteredBookings.length === 0 && (
+              <tr>
+                <td colSpan="6" style={{ padding: '48px 24px', textAlign: 'center', color: '#6B7280' }}>
+                  No payment transactions found matching the selected filter.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      )}
+
+      {/* Create Payment Link Modal */}
+      {showCreateModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: 16, width: '100%', maxWidth: 480, overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#111827' }}>Generate Payment Link</h3>
+              <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateLink} style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>Guest / Customer Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Ramesh Kumar"
+                  value={linkForm.customerName}
+                  onChange={e => setLinkForm({ ...linkForm, customerName: e.target.value })}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>Phone Number</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 9876543210"
+                    value={linkForm.customerPhone}
+                    onChange={e => setLinkForm({ ...linkForm, customerPhone: e.target.value })}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>Amount (₹) *</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    placeholder="e.g. 2500"
+                    value={linkForm.amount}
+                    onChange={e => setLinkForm({ ...linkForm, amount: e.target.value })}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>Guest Email (Optional)</label>
+                <input
+                  type="email"
+                  placeholder="e.g. guest@example.com"
+                  value={linkForm.customerEmail}
+                  onChange={e => setLinkForm({ ...linkForm, customerEmail: e.target.value })}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>Associated Hotel</label>
+                <select
+                  value={linkForm.hotelId}
+                  onChange={e => setLinkForm({ ...linkForm, hotelId: e.target.value })}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.9rem', boxSizing: 'border-box', backgroundColor: 'white' }}
+                >
+                  {properties.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>Purpose / Notes</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Advance Room Booking / Banquet Hall Booking"
+                  value={linkForm.purpose}
+                  onChange={e => setLinkForm({ ...linkForm, purpose: e.target.value })}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  style={{ padding: '10px 18px', borderRadius: 8, border: '1px solid #D1D5DB', backgroundColor: 'white', color: '#374151', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  style={{ padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: '#D97706', color: 'white', fontWeight: 600, cursor: creating ? 'not-allowed' : 'pointer' }}
+                >
+                  {creating ? 'Generating...' : 'Generate & Copy Link'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Main Transactions Table */}
       <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
