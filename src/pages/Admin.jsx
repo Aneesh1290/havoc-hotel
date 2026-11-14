@@ -632,53 +632,55 @@ function DashboardView({ setActiveTab, properties, bookings, inventoryAlerts, ro
 
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
-
-
+      <div className="admin-two-col-grid" style={{ marginBottom: 24 }}>
         <DashboardCard title="Today's Arrivals" action="View All" onAction={() => setActiveTab('bookings')}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-            <thead>
-              <tr style={{ color: '#6B7280', borderBottom: '1px solid #F3F4F6' }}>
-                <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Guest</th>
-                <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Hotel</th>
-                <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Rooms</th>
-              </tr>
-            </thead>
-            <tbody>
-              {arrivalsList.map((a, i) => (
-                <tr key={i} style={{ borderBottom: i === arrivalsList.length -1 ? 'none' : '1px solid #F3F4F6' }}>
-                  <td style={{ padding: '16px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontWeight: 500, color: '#111827' }}>{a.name}</span>
-                  </td>
-                  <td style={{ padding: '16px 0', color: '#4B5563' }}>{a.hotel}</td>
-                  <td style={{ padding: '16px 0', color: '#111827', fontWeight: 500 }}>{a.rooms}</td>
+          <div className="admin-table-responsive">
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+              <thead>
+                <tr style={{ color: '#6B7280', borderBottom: '1px solid #F3F4F6' }}>
+                  <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Guest</th>
+                  <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Hotel</th>
+                  <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Rooms</th>
                 </tr>
-              ))}
-              {arrivalsList.length === 0 && <tr><td colSpan="3" style={{padding: 20, textAlign: 'center', color: '#6B7280'}}>No arrivals today.</td></tr>}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {arrivalsList.map((a, i) => (
+                  <tr key={i} style={{ borderBottom: i === arrivalsList.length -1 ? 'none' : '1px solid #F3F4F6' }}>
+                    <td style={{ padding: '16px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontWeight: 500, color: '#111827' }}>{a.name}</span>
+                    </td>
+                    <td style={{ padding: '16px 0', color: '#4B5563' }}>{a.hotel}</td>
+                    <td style={{ padding: '16px 0', color: '#111827', fontWeight: 500 }}>{a.rooms}</td>
+                  </tr>
+                ))}
+                {arrivalsList.length === 0 && <tr><td colSpan="3" style={{padding: 20, textAlign: 'center', color: '#6B7280'}}>No arrivals today.</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </DashboardCard>
 
         <DashboardCard title="Upcoming Departures" action="View All" onAction={() => setActiveTab('bookings')}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-            <thead>
-              <tr style={{ color: '#6B7280', borderBottom: '1px solid #F3F4F6' }}>
-                <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Guest</th>
-                <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Hotel</th>
-              </tr>
-            </thead>
-            <tbody>
-              {departuresList.map((d, i) => (
-                <tr key={i} style={{ borderBottom: i === departuresList.length -1 ? 'none' : '1px solid #F3F4F6' }}>
-                  <td style={{ padding: '16px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontWeight: 500, color: '#111827' }}>{d.name}</span>
-                  </td>
-                  <td style={{ padding: '16px 0', color: '#4B5563' }}>{d.hotel}</td>
+          <div className="admin-table-responsive">
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+              <thead>
+                <tr style={{ color: '#6B7280', borderBottom: '1px solid #F3F4F6' }}>
+                  <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Guest</th>
+                  <th style={{ textAlign: 'left', padding: '12px 0', fontWeight: 500 }}>Hotel</th>
                 </tr>
-              ))}
-              {departuresList.length === 0 && <tr><td colSpan="2" style={{padding: 20, textAlign: 'center', color: '#6B7280'}}>No departures today.</td></tr>}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {departuresList.map((d, i) => (
+                  <tr key={i} style={{ borderBottom: i === departuresList.length -1 ? 'none' : '1px solid #F3F4F6' }}>
+                    <td style={{ padding: '16px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontWeight: 500, color: '#111827' }}>{d.name}</span>
+                    </td>
+                    <td style={{ padding: '16px 0', color: '#4B5563' }}>{d.hotel}</td>
+                  </tr>
+                ))}
+                {departuresList.length === 0 && <tr><td colSpan="2" style={{padding: 20, textAlign: 'center', color: '#6B7280'}}>No departures today.</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </DashboardCard>
       </div>
     </>

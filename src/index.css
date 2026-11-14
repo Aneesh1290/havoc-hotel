@@ -1416,10 +1416,42 @@ button {
   .admin-properties-preview-grid {
     grid-template-columns: 1fr !important;
     gap: 16px !important;
+    width: 100% !important;
+  }
+
+  .admin-metric-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .admin-two-col-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+    width: 100% !important;
+  }
+
+  .admin-table-responsive {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .admin-table-responsive table {
-    min-width: 600px;
+    min-width: 540px;
+  }
+
+  /* Prevent horizontal stretch on dashboard cards */
+  .admin-main {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  .admin-content-pad {
+    padding: 16px 12px 36px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
   }
 }
 
