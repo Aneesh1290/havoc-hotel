@@ -1762,7 +1762,7 @@ function BookingsView({ bookings, properties = [], rooms = [], removeBooking, se
 
       <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
         <div className="admin-table-responsive" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
-        <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', textAlign: 'left' }}>
+        <table className="mobile-card-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead style={{ backgroundColor: '#F9FAFB' }}>
             <tr>
               <th style={thStyle}>Booking ID</th>
@@ -1777,19 +1777,19 @@ function BookingsView({ bookings, properties = [], rooms = [], removeBooking, se
           <tbody>
             {filteredBookings.map((b, idx) => (
               <tr key={b.id} style={{ borderBottom: idx === filteredBookings.length - 1 ? 'none' : '1px solid #E5E7EB' }}>
-                <td style={{ ...tdStyle, color: '#6B7280', fontSize: '0.85rem' }}>#{b.id.toString().substring(0,8)}</td>
-                <td style={{ ...tdStyle, fontWeight: 500, color: '#111827' }}>{b.name}</td>
-                <td style={{ ...tdStyle, color: '#4B5563' }}>{b.hotelName}</td>
-                <td style={{ ...tdStyle, color: '#4B5563' }}>{format(parseISO(b.checkIn), 'dd MMM yyyy')} - {format(parseISO(b.checkOut), 'dd MMM yyyy')}</td>
-                <td style={{ ...tdStyle, fontWeight: 500 }}>₹{(b.amount || 0).toLocaleString()}</td>
-                <td style={tdStyle}>
+                <td data-label="Booking ID" style={{ ...tdStyle, color: '#6B7280', fontSize: '0.85rem' }}>#{b.id.toString().substring(0,8)}</td>
+                <td data-label="Guest" style={{ ...tdStyle, fontWeight: 500, color: '#111827', textAlign: 'right' }}>{b.name}</td>
+                <td data-label="Hotel" style={{ ...tdStyle, color: '#4B5563', textAlign: 'right' }}>{b.hotelName}</td>
+                <td data-label="Dates" style={{ ...tdStyle, color: '#4B5563', textAlign: 'right' }}>{format(parseISO(b.checkIn), 'dd MMM yyyy')} - {format(parseISO(b.checkOut), 'dd MMM yyyy')}</td>
+                <td data-label="Amount" style={{ ...tdStyle, fontWeight: 500, textAlign: 'right' }}>₹{(b.amount || 0).toLocaleString()}</td>
+                <td data-label="Status" style={tdStyle}>
                   <span style={{ padding: '6px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, 
                     color: b.status === 'Confirmed' ? '#10B981' : b.status === 'Checked In' ? '#3B82F6' : '#F59E0B',
                     backgroundColor: b.status === 'Confirmed' ? '#ECFDF5' : b.status === 'Checked In' ? '#EFF6FF' : '#FEF3C7' }}>
                     {b.status}
                   </span>
                 </td>
-                <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                <td className="actions-cell" style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
                   {(!b.paymentMethod || b.paymentMethod.toLowerCase().includes('desk') || (b.status && b.status.includes('Pay at Desk'))) && (
                     <button
                       onClick={() => handleGenerateBookingLink(b)}
@@ -2469,7 +2469,7 @@ function PaymentsView({ bookings = [], properties = [] }) {
             <span style={{ fontSize: '0.82rem', color: '#6B7280' }}>Share links directly with guests to collect payments via ICICI Bank</span>
           </div>
           <div className="admin-table-responsive" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
-          <table style={{ width: '100%', minWidth: 680, borderCollapse: 'collapse', textAlign: 'left' }}>
+          <table className="mobile-card-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead style={{ backgroundColor: '#F9FAFB' }}>
               <tr>
                 <th style={thStyle}>Link ID</th>
@@ -2488,25 +2488,25 @@ function PaymentsView({ bookings = [], properties = [] }) {
 
                 return (
                   <tr key={pl.id} style={{ borderBottom: idx === paymentLinks.length - 1 ? 'none' : '1px solid #E5E7EB' }}>
-                    <td style={{ ...tdStyle, fontFamily: 'monospace', fontWeight: 600, color: '#4B5563', fontSize: '0.85rem' }}>
+                    <td data-label="Link ID" style={{ ...tdStyle, fontFamily: 'monospace', fontWeight: 600, color: '#4B5563', fontSize: '0.85rem' }}>
                       {pl.id}
                     </td>
-                    <td style={tdStyle}>
-                      <div style={{ fontWeight: 600, color: '#111827' }}>{pl.customerName}</div>
-                      <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
+                    <td data-label="Guest" style={tdStyle}>
+                      <div style={{ fontWeight: 600, color: '#111827', textAlign: 'right' }}>{pl.customerName}</div>
+                      <div style={{ fontSize: '0.78rem', color: '#6B7280', textAlign: 'right' }}>
                         {[pl.customerPhone, pl.customerEmail].filter(Boolean).join(' • ') || 'No contact provided'}
                       </div>
                     </td>
-                    <td style={tdStyle}>
-                      <div style={{ fontWeight: 500, color: '#374151', fontSize: '0.88rem' }}>{pl.hotelName || 'Sabharwal Hotel'}</div>
-                      <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>{pl.purpose || 'Hotel Accommodation'}</div>
+                    <td data-label="Property" style={tdStyle}>
+                      <div style={{ fontWeight: 500, color: '#374151', fontSize: '0.88rem', textAlign: 'right' }}>{pl.hotelName || 'Sabharwal Hotel'}</div>
+                      <div style={{ fontSize: '0.78rem', color: '#6B7280', textAlign: 'right' }}>{pl.purpose || 'Hotel Accommodation'}</div>
                     </td>
-                    <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
+                    <td data-label="Amount" style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                       <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>
                         ₹{Number(pl.amount).toLocaleString('en-IN')}
                       </span>
                     </td>
-                    <td style={tdStyle}>
+                    <td data-label="Status" style={tdStyle}>
                       {isPaid ? (
                         <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, color: '#059669', backgroundColor: '#ECFDF5' }}>
                           Paid Online
@@ -2517,7 +2517,7 @@ function PaymentsView({ bookings = [], properties = [] }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <td className="actions-cell" style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <button
                         onClick={() => copyToClipboard(linkUrl, pl.id)}
                         style={{
@@ -2624,7 +2624,7 @@ function PaymentsView({ bookings = [], properties = [] }) {
       {activeSubTab === 'transactions' && (
       <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
         <div className="admin-table-responsive" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
-        <table style={{ width: '100%', minWidth: 680, borderCollapse: 'collapse', textAlign: 'left' }}>
+        <table className="mobile-card-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead style={{ backgroundColor: '#F9FAFB' }}>
             <tr>
               <th style={thStyle}>Date & Time</th>
@@ -2651,30 +2651,30 @@ function PaymentsView({ bookings = [], properties = [] }) {
 
               return (
                 <tr key={b.id || idx} style={{ borderBottom: idx === filteredBookings.length - 1 ? 'none' : '1px solid #E5E7EB' }}>
-                  <td style={{ ...tdStyle, color: '#4B5563', whiteSpace: 'nowrap' }}>
-                    <div style={{ fontWeight: 500, color: '#111827' }}>{displayDate}</div>
-                    <div style={{ fontSize: '0.78rem', color: '#9CA3AF' }}>Check-in Scheduled</div>
+                  <td data-label="Date" style={{ ...tdStyle, color: '#4B5563', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontWeight: 500, color: '#111827', textAlign: 'right' }}>{displayDate}</div>
+                    <div style={{ fontSize: '0.78rem', color: '#9CA3AF', textAlign: 'right' }}>Check-in Scheduled</div>
                   </td>
-                  <td style={tdStyle}>
+                  <td data-label="Order ID" style={tdStyle}>
                     <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#374151', fontSize: '0.88rem', backgroundColor: '#F3F4F6', padding: '3px 8px', borderRadius: 6 }}>
                       {orderId}
                     </span>
                   </td>
-                  <td style={tdStyle}>
-                    <div style={{ fontWeight: 600, color: '#111827' }}>{b.name || 'Guest'}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: 2 }}>
+                  <td data-label="Guest & Hotel" style={tdStyle}>
+                    <div style={{ fontWeight: 600, color: '#111827', textAlign: 'right' }}>{b.name || 'Guest'}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: 2, textAlign: 'right' }}>
                       {b.hotelName || 'Sabharwal Hotel'} {b.rooms ? `• ${b.rooms} Room(s)` : ''}
                     </div>
                   </td>
-                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
+                  <td data-label="Amount" style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                     <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>
                       ₹{(b.amount || 0).toLocaleString()}
                     </span>
                   </td>
-                  <td style={tdStyle}>
+                  <td data-label="Channel" style={tdStyle}>
                     {getMethodBadge(b)}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: 'right' }}>
+                  <td data-label="Status" style={{ ...tdStyle, textAlign: 'right' }}>
                     {getStatusBadge(b.status)}
                   </td>
                 </tr>

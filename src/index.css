@@ -1307,11 +1307,79 @@ button {
   margin-bottom: 28px;
 }
 
-.admin-two-col-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 24px;
-  margin-bottom: 24px;
+/* Mobile Responsive Table Cards (no horizontal scrolling required) */
+@media (max-width: 768px) {
+  .mobile-card-table {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .mobile-card-table thead {
+    display: none !important;
+  }
+
+  .mobile-card-table tbody {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+    padding: 12px !important;
+  }
+
+  .mobile-card-table tr {
+    display: flex !important;
+    flex-direction: column !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 14px !important;
+    padding: 14px 16px !important;
+    gap: 10px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
+  }
+
+  .mobile-card-table td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 4px 0 !important;
+    border-bottom: 1px dashed #F1F5F9 !important;
+    font-size: 0.88rem !important;
+    white-space: normal !important;
+  }
+
+  .mobile-card-table td:last-child {
+    border-bottom: none !important;
+    padding-top: 8px !important;
+  }
+
+  .mobile-card-table td::before {
+    content: attr(data-label);
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    color: #64748B !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    margin-right: 12px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Make actions row stretch across full width on mobile */
+  .mobile-card-table td.actions-cell {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+  }
+  .mobile-card-table td.actions-cell::before {
+    display: none !important;
+  }
+
+  .mobile-card-table td.actions-cell button,
+  .mobile-card-table td.actions-cell a {
+    flex: 1 !important;
+    justify-content: center !important;
+    padding: 10px 14px !important;
+    font-size: 0.88rem !important;
+  }
 }
 
 .admin-table-responsive {
@@ -1435,10 +1503,11 @@ button {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    overflow-x: visible !important;
   }
 
-  .admin-table-responsive table {
-    min-width: 540px;
+  .admin-table-responsive table:not(.mobile-card-table) {
+    min-width: 500px;
   }
 
   /* Prevent horizontal stretch on dashboard cards */
