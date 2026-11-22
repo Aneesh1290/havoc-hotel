@@ -7,7 +7,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import db, { dbPath, dataDir as dbDataDir } from './db.js';
 import { sendBookingConfirmationEmail, getMailTransporter } from './emailService.js';
-import { initiateSale, verifyCallbackHash, checkTransactionStatus, getConfig } from './iciciPgService.js';
+import { initiateSale, verifyCallbackHash, checkTransactionStatus, refundTransaction, getConfig } from './iciciPgService.js';
 
 const JWT_SECRET = 'sabharwal_super_secret_key_2026'; // In production, use env var
 
@@ -917,6 +917,133 @@ app.post('/api/payment-links/:linkId/pay', async (req, res) => {
     }
   } catch (err) {
     console.error('[PaymentLinks] Pay error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Process Refund for a Payment Link
+app.post('/api/payment-links/:linkId/refund', async (req, res) => {
+  try {
+    const { refundAmount, reason } = req.body;
+    const link = db.prepare('SELECT * FROM payment_links WHERE id = ?').get(req.params.linkId);
+    if (!link) {
+      return res.status(404).json({ error: 'Payment link not found.' });
+    }
+    if (link.status !== 'Paid') {
+      return res.status(400).json({ error: 'Only paid transactions can be refunded.' });
+    }
+    if (link.refundStatus === 'Refunded') {
+      return res.status(400).json({ error: 'This payment has already been refunded.' });
+    }
+
+    const amountToRefund = Number(refundAmount) > 0 ? Number(refundAmount) : link.amount;
+    if (amountToRefund > link.amount) {
+      return res.status(400).json({ error: `Refund amount cannot exceed paid amount of ₹${link.amount}.` });
+    }
+
+    // Generate unique refund transaction reference (max 20 alphanumeric)
+    const refundTxnNo = `RF${Date.now()}`;
+    const originalTxnNo = link.txnId || link.id;
+
+    const refundResult = await refundTransaction({
+      refundTxnNo,
+      originalTxnNo,
+      amount: amountToRefund,
+      addlParam1: link.hotelName || 'Sabharwal Hotel',
+      addlParam2: reason || 'Customer Refund'
+    });
+
+    if (refundResult.success) {
+      const refundedAt = new Date().toISOString();
+      const newStatus = amountToRefund >= link.amount ? 'Refunded' : 'Partially Refunded';
+
+      db.prepare(`
+        UPDATE payment_links 
+        SET refundStatus = ?, refundAmount = ?, refundTxnId = ?, refundedAt = ?
+        WHERE id = ?
+      `).run(newStatus, amountToRefund, refundResult.refundTxnId || refundTxnNo, refundedAt, link.id);
+
+      // If associated with a booking, reflect refund on the booking too
+      if (link.bookingId) {
+        db.prepare(`
+          UPDATE bookings 
+          SET status = ?, refundStatus = ?, refundAmount = ?, refundTxnId = ?, refundedAt = ?
+          WHERE id = ?
+        `).run(`Cancelled (${newStatus})`, newStatus, amountToRefund, refundResult.refundTxnId || refundTxnNo, refundedAt, link.bookingId);
+      }
+
+      res.json({
+        success: true,
+        refundStatus: newStatus,
+        refundAmount: amountToRefund,
+        refundTxnId: refundResult.refundTxnId || refundTxnNo,
+        refundedAt
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: refundResult.responseDescription || `ICICI Bank refund failed with code: ${refundResult.responseCode}`
+      });
+    }
+  } catch (err) {
+    console.error('[PaymentLinks] Refund error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Process Refund for a Booking
+app.post('/api/bookings/:bookingId/refund', async (req, res) => {
+  try {
+    const { refundAmount, reason } = req.body;
+    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found.' });
+    }
+    if (booking.refundStatus === 'Refunded') {
+      return res.status(400).json({ error: 'This booking has already been refunded.' });
+    }
+
+    const originalTxnNo = booking.txnId || booking.iciciOrderId;
+    if (!originalTxnNo) {
+      return res.status(400).json({ error: 'No ICICI online transaction ID found for this booking.' });
+    }
+
+    const amountToRefund = Number(refundAmount) > 0 ? Number(refundAmount) : (booking.amount || 0);
+    const refundTxnNo = `RF${Date.now()}`;
+
+    const refundResult = await refundTransaction({
+      refundTxnNo,
+      originalTxnNo,
+      amount: amountToRefund,
+      addlParam1: booking.hotelName || 'Sabharwal Hotel',
+      addlParam2: reason || 'Booking Cancellation Refund'
+    });
+
+    if (refundResult.success) {
+      const refundedAt = new Date().toISOString();
+      const newStatus = amountToRefund >= booking.amount ? 'Refunded' : 'Partially Refunded';
+
+      db.prepare(`
+        UPDATE bookings 
+        SET status = ?, refundStatus = ?, refundAmount = ?, refundTxnId = ?, refundedAt = ?
+        WHERE id = ?
+      `).run(`Cancelled (${newStatus})`, newStatus, amountToRefund, refundResult.refundTxnId || refundTxnNo, refundedAt, booking.id);
+
+      res.json({
+        success: true,
+        refundStatus: newStatus,
+        refundAmount: amountToRefund,
+        refundTxnId: refundResult.refundTxnId || refundTxnNo,
+        refundedAt
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: refundResult.responseDescription || `ICICI Bank refund failed with code: ${refundResult.responseCode}`
+      });
+    }
+  } catch (err) {
+    console.error('[Bookings] Refund error:', err);
     res.status(500).json({ error: err.message });
   }
 });

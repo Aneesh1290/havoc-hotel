@@ -6,7 +6,7 @@ import {
   Archive, Users, CreditCard, FileText, Tag, Image as ImageIcon, 
   Settings, Search, Bell, Plus, Headset, CalendarCheck, Wallet, 
   PieChart, Users as UsersIcon, ArrowRight, MapPin, Edit2, Trash2, Check, X, MoreVertical,
-  Clock, CheckCircle, Mail, Send, Copy, Download, FileSpreadsheet, UserCheck, ShieldCheck, Key, Menu, Link2, ExternalLink
+  Clock, CheckCircle, Mail, Send, Copy, Download, FileSpreadsheet, UserCheck, ShieldCheck, Key, Menu, Link2, ExternalLink, RotateCcw, AlertTriangle
 } from 'lucide-react';
 import { format, isSameDay, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
 import { exportCorporateHotelExcel } from '../utils/excelExporter';
@@ -2249,6 +2249,8 @@ function PaymentsView({ bookings = [], properties = [] }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [refundModal, setRefundModal] = useState({ open: false, item: null, type: 'link', amount: '', reason: '' });
+  const [refunding, setRefunding] = useState(false);
   const [linkForm, setLinkForm] = useState({
     customerName: '',
     customerEmail: '',
@@ -2276,6 +2278,58 @@ function PaymentsView({ bookings = [], properties = [] }) {
   useEffect(() => {
     fetchPaymentLinks();
   }, []);
+
+  const handleOpenRefundModal = (item, type = 'link') => {
+    const defaultAmount = type === 'link' ? (item.amount || '') : (item.amount || '');
+    setRefundModal({
+      open: true,
+      item,
+      type,
+      amount: defaultAmount,
+      reason: ''
+    });
+  };
+
+  const handleProcessRefund = async (e) => {
+    e.preventDefault();
+    if (!refundModal.item || !refundModal.amount) return;
+    const confirmMsg = `Are you sure you want to refund ₹${Number(refundModal.amount).toLocaleString('en-IN')} via ICICI Bank Orange PG? This action cannot be reversed.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setRefunding(true);
+    try {
+      const endpoint = refundModal.type === 'link' 
+        ? `/api/payment-links/${encodeURIComponent(refundModal.item.id)}/refund`
+        : `/api/bookings/${encodeURIComponent(refundModal.item.id)}/refund`;
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: Number(refundModal.amount),
+          reason: refundModal.reason
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Refund Successful!\n\nRefund Reference ID: ${data.refundTxnId || 'Processed'}\nStatus: ${data.status || 'Refunded'}`);
+        setRefundModal({ open: false, item: null, type: 'link', amount: '', reason: '' });
+        fetchPaymentLinks();
+        if (window.location) {
+          // If in context of bookings, refresh the page or trigger re-fetch
+          setTimeout(() => {
+            window.location.reload();
+          }, 600);
+        }
+      } else {
+        alert(`Refund Failed: ${data.error || 'Gateway returned an error.'}`);
+      }
+    } catch (err) {
+      alert('Error communicating with server during refund.');
+    } finally {
+      setRefunding(false);
+    }
+  };
 
   const handleCreateLink = async (e) => {
     e.preventDefault();
@@ -2507,7 +2561,15 @@ function PaymentsView({ bookings = [], properties = [] }) {
                       </span>
                     </td>
                     <td data-label="Status" style={tdStyle}>
-                      {isPaid ? (
+                      {pl.refundStatus === 'Refunded' ? (
+                        <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, color: '#7C3AED', backgroundColor: '#F5F3FF', border: '1px solid #DDD6FE' }}>
+                          Refunded {pl.refundAmount ? `₹${Number(pl.refundAmount).toLocaleString('en-IN')}` : ''}
+                        </span>
+                      ) : pl.refundStatus === 'Partially Refunded' ? (
+                        <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, color: '#9333EA', backgroundColor: '#FAF5FF', border: '1px solid #E9D5FF' }}>
+                          Partially Refunded
+                        </span>
+                      ) : isPaid ? (
                         <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, color: '#059669', backgroundColor: '#ECFDF5' }}>
                           Paid Online
                         </span>
@@ -2518,6 +2580,29 @@ function PaymentsView({ bookings = [], properties = [] }) {
                       )}
                     </td>
                     <td className="actions-cell" style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {isPaid && pl.refundStatus !== 'Refunded' && (
+                        <button
+                          onClick={() => handleOpenRefundModal(pl, 'link')}
+                          title="Initiate refund via ICICI Orange PG"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            padding: '6px 12px',
+                            borderRadius: 6,
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            backgroundColor: '#FEF2F2',
+                            color: '#DC2626',
+                            border: '1px solid #FECACA',
+                            cursor: 'pointer',
+                            marginRight: 8
+                          }}
+                        >
+                          <RotateCcw size={13} />
+                          Refund
+                        </button>
+                      )}
                       <button
                         onClick={() => copyToClipboard(linkUrl, pl.id)}
                         style={{
@@ -2632,7 +2717,8 @@ function PaymentsView({ bookings = [], properties = [] }) {
               <th style={thStyle}>Guest & Hotel</th>
               <th style={thStyle}>Amount</th>
               <th style={thStyle}>Payment Channel</th>
-              <th style={{ ...thStyle, textAlign: 'right' }}>Status</th>
+              <th style={thStyle}>Status</th>
+              <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -2674,15 +2760,49 @@ function PaymentsView({ bookings = [], properties = [] }) {
                   <td data-label="Channel" style={tdStyle}>
                     {getMethodBadge(b)}
                   </td>
-                  <td data-label="Status" style={{ ...tdStyle, textAlign: 'right' }}>
+                  <td data-label="Status" style={tdStyle}>
                     {getStatusBadge(b.status)}
+                    {b.refundStatus && (
+                      <div style={{ marginTop: 4 }}>
+                        <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: '0.7rem', fontWeight: 600, color: '#7C3AED', backgroundColor: '#F5F3FF', border: '1px solid #DDD6FE' }}>
+                          Refund: ₹{Number(b.refundAmount || 0).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    )}
+                  </td>
+                  <td className="actions-cell" style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {((b.paymentMethod || '').toLowerCase().includes('online') || b.txnId || b.iciciOrderId) && 
+                     !b.status?.includes('Cancelled') && b.refundStatus !== 'Refunded' ? (
+                      <button
+                        onClick={() => handleOpenRefundModal(b, 'booking')}
+                        title="Initiate refund via ICICI Orange PG"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '6px 12px',
+                          borderRadius: 6,
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          backgroundColor: '#FEF2F2',
+                          color: '#DC2626',
+                          border: '1px solid #FECACA',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <RotateCcw size={13} />
+                        Refund
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: '0.8rem', color: '#9CA3AF' }}>-</span>
+                    )}
                   </td>
                 </tr>
               );
             })}
             {filteredBookings.length === 0 && (
               <tr>
-                <td colSpan="6" style={{ padding: '48px 24px', textAlign: 'center', color: '#6B7280' }}>
+                <td colSpan="7" style={{ padding: '48px 24px', textAlign: 'center', color: '#6B7280' }}>
                   No payment transactions found matching the selected filter.
                 </td>
               </tr>
@@ -2798,74 +2918,128 @@ function PaymentsView({ bookings = [], properties = [] }) {
         </div>
       )}
 
-      {/* Main Transactions Table */}
-      <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-          <thead style={{ backgroundColor: '#F9FAFB' }}>
-            <tr>
-              <th style={thStyle}>Date & Time</th>
-              <th style={thStyle}>Transaction / Order ID</th>
-              <th style={thStyle}>Guest & Hotel</th>
-              <th style={thStyle}>Amount</th>
-              <th style={thStyle}>Payment Channel</th>
-              <th style={{ ...thStyle, textAlign: 'right' }}>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredBookings.map((b, idx) => {
-              let displayDate = '-';
-              if (b.checkIn) {
-                try {
-                  displayDate = format(parseISO(b.checkIn), 'dd MMM yyyy, HH:mm');
-                } catch (e) {
-                  displayDate = b.checkIn;
-                }
-              }
+      {/* ICICI Bank Refund Modal */}
+      {refundModal.open && refundModal.item && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: 16, width: '100%', maxWidth: 460, overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)' }}>
+            <div style={{ padding: '18px 22px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FEF2F2' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}>
+                  <RotateCcw size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#991B1B' }}>Initiate Online Refund</h3>
+                  <div style={{ fontSize: '0.78rem', color: '#B91C1C' }}>ICICI Bank Orange PG Live Gateway</div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setRefundModal({ open: false, item: null, type: 'link', amount: '', reason: '' })} 
+                disabled={refunding}
+                style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-              // Compute clean order reference
-              const orderId = b.id ? (b.id.toString().startsWith('#') ? b.id : `#ORD_${b.id.toString().substring(0, 8)}`) : `#ORD_${idx + 101}`;
+            <form onSubmit={handleProcessRefund} style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ padding: '12px 14px', borderRadius: 10, backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: 6, fontSize: '0.85rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#6B7280' }}>Reference:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#111827' }}>
+                    {refundModal.item.id}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#6B7280' }}>Customer / Guest:</span>
+                  <span style={{ fontWeight: 600, color: '#111827' }}>
+                    {refundModal.item.customerName || refundModal.item.name || 'Guest'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#6B7280' }}>Original Paid Amount:</span>
+                  <span style={{ fontWeight: 700, color: '#059669', fontSize: '0.95rem' }}>
+                    ₹{Number(refundModal.item.amount || 0).toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
 
-              return (
-                <tr key={b.id || idx} style={{ borderBottom: idx === filteredBookings.length - 1 ? 'none' : '1px solid #E5E7EB' }}>
-                  <td style={{ ...tdStyle, color: '#4B5563', whiteSpace: 'nowrap' }}>
-                    <div style={{ fontWeight: 500, color: '#111827' }}>{displayDate}</div>
-                    <div style={{ fontSize: '0.78rem', color: '#9CA3AF' }}>Check-in Scheduled</div>
-                  </td>
-                  <td style={tdStyle}>
-                    <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#374151', fontSize: '0.88rem', backgroundColor: '#F3F4F6', padding: '3px 8px', borderRadius: 6 }}>
-                      {orderId}
-                    </span>
-                  </td>
-                  <td style={tdStyle}>
-                    <div style={{ fontWeight: 600, color: '#111827' }}>{b.name || 'Guest'}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: 2 }}>
-                      {b.hotelName || 'Sabharwal Hotel'} {b.rooms ? `• ${b.rooms} Room(s)` : ''}
-                    </div>
-                  </td>
-                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
-                    <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>
-                      ₹{(b.amount || 0).toLocaleString()}
-                    </span>
-                  </td>
-                  <td style={tdStyle}>
-                    {getMethodBadge(b)}
-                  </td>
-                  <td style={{ ...tdStyle, textAlign: 'right' }}>
-                    {getStatusBadge(b.status)}
-                  </td>
-                </tr>
-              );
-            })}
-            {filteredBookings.length === 0 && (
-              <tr>
-                <td colSpan="6" style={{ padding: '48px 24px', textAlign: 'center', color: '#6B7280' }}>
-                  No payment transactions found matching the selected filter.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                  Refund Amount (₹) *
+                </label>
+                <input
+                  type="number"
+                  required
+                  step="0.01"
+                  min="1"
+                  max={refundModal.item.amount}
+                  value={refundModal.amount}
+                  onChange={e => setRefundModal({ ...refundModal, amount: e.target.value })}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '1rem', fontWeight: 700, boxSizing: 'border-box' }}
+                />
+                <span style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: 4, display: 'block' }}>
+                  Max refundable: ₹{Number(refundModal.item.amount || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                  Reason for Refund (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Customer requested cancellation / Date change"
+                  value={refundModal.reason}
+                  onChange={e => setRefundModal({ ...refundModal, reason: e.target.value })}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', backgroundColor: '#FEF3C7', borderRadius: 8, border: '1px solid #FDE68A' }}>
+                <AlertTriangle size={18} color="#D97706" style={{ flexShrink: 0, marginTop: 2 }} />
+                <span style={{ fontSize: '0.78rem', color: '#92400E', lineHeight: 1.4 }}>
+                  This will immediately trigger an online refund through the ICICI Bank Orange PG API to the customer's original payment method.
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 4 }}>
+                <button
+                  type="button"
+                  disabled={refunding}
+                  onClick={() => setRefundModal({ open: false, item: null, type: 'link', amount: '', reason: '' })}
+                  style={{ padding: '10px 18px', borderRadius: 8, border: '1px solid #D1D5DB', backgroundColor: 'white', color: '#374151', fontWeight: 600, cursor: refunding ? 'not-allowed' : 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={refunding}
+                  style={{ 
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '10px 20px', 
+                    borderRadius: 8, 
+                    border: 'none', 
+                    backgroundColor: refunding ? '#9CA3AF' : '#DC2626', 
+                    color: 'white', 
+                    fontWeight: 600, 
+                    cursor: refunding ? 'not-allowed' : 'pointer' 
+                  }}
+                >
+                  {refunding ? (
+                    <>Processing Refund...</>
+                  ) : (
+                    <>
+                      <RotateCcw size={15} /> Confirm Refund
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

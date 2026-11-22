@@ -198,3 +198,74 @@ export async function checkTransactionStatus({ merchantTxnNo, originalTxnNo }) {
 
   return await response.json();
 }
+
+/**
+ * Refund API Call with ICICI Bank Orange PG
+ *
+ * Mandated Parameters (application/x-www-form-urlencoded):
+ * - merchantId: Merchant ID
+ * - aggregatorID: Aggregator ID (if applicable)
+ * - merchantTxnNo: New unique reference number for the refund request (max 20 chars)
+ * - originalTxnNo: The reference number / txnID of the initial transaction
+ * - amount: Amount to be refunded (e.g. 50.00)
+ * - transactionType: 'REFUND'
+ * - addlParam1: Optional additional info
+ * - addlParam2: Optional additional info
+ * - secureHash: HMAC-SHA256 signature
+ */
+export async function refundTransaction({
+  refundTxnNo,
+  originalTxnNo,
+  amount,
+  addlParam1,
+  addlParam2
+}) {
+  const cfg = getConfig();
+
+  const requestPayload = {
+    merchantId: cfg.mid,
+    merchantTxnNo: String(refundTxnNo).slice(0, 20),
+    originalTxnNo: String(originalTxnNo).slice(0, 20),
+    amount: Number(amount).toFixed(2),
+    transactionType: 'REFUND'
+  };
+
+  if (cfg.aggregatorId) {
+    requestPayload.aggregatorID = cfg.aggregatorId;
+  }
+  if (addlParam1) {
+    requestPayload.addlParam1 = String(addlParam1).slice(0, 64);
+  }
+  if (addlParam2) {
+    requestPayload.addlParam2 = String(addlParam2).slice(0, 64);
+  }
+
+  // Calculate secureHash
+  const secureHash = generateHmacDigest(requestPayload, cfg.key);
+  requestPayload.secureHash = secureHash;
+
+  console.log(`[ICICI-PG] Calling refundTransaction [${cfg.env}] refundTxnNo: ${requestPayload.merchantTxnNo}, originalTxnNo: ${requestPayload.originalTxnNo}, amount: ${requestPayload.amount}`);
+
+  const formBody = Object.keys(requestPayload)
+    .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(requestPayload[key]))
+    .join('&');
+
+  const response = await fetch(cfg.statusCheckUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: formBody
+  });
+
+  const responseJson = await response.json();
+  console.log('[ICICI-PG] refundTransaction response:', responseJson);
+
+  const isSuccess = responseJson.responseCode === '000' || responseJson.responseCode === '0000' || responseJson.responseCode === '0';
+  return {
+    success: isSuccess,
+    responseCode: responseJson.responseCode,
+    responseDescription: responseJson.respDescription || responseJson.responseDescription,
+    refundTxnId: responseJson.txnID,
+    merchantTxnNo: responseJson.merchantTxnNo || requestPayload.merchantTxnNo,
+    raw: responseJson
+  };
+}

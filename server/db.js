@@ -221,6 +221,20 @@ try {
   db.exec("ALTER TABLE properties ADD COLUMN status TEXT DEFAULT 'active'");
 } catch (e) {}
 
+try {
+  db.exec("ALTER TABLE payment_links ADD COLUMN refundStatus TEXT");
+  db.exec("ALTER TABLE payment_links ADD COLUMN refundAmount REAL");
+  db.exec("ALTER TABLE payment_links ADD COLUMN refundTxnId TEXT");
+  db.exec("ALTER TABLE payment_links ADD COLUMN refundedAt TEXT");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE bookings ADD COLUMN refundStatus TEXT");
+  db.exec("ALTER TABLE bookings ADD COLUMN refundAmount REAL");
+  db.exec("ALTER TABLE bookings ADD COLUMN refundTxnId TEXT");
+  db.exec("ALTER TABLE bookings ADD COLUMN refundedAt TEXT");
+} catch (e) {}
+
 // Auto-migrate any legacy misspelled "Banglore" to "Bengaluru, Karnataka"
 try {
   db.prepare("UPDATE properties SET location = 'Bengaluru, Karnataka' WHERE location = 'Banglore'").run();
