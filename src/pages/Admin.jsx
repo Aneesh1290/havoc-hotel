@@ -1690,7 +1690,7 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
 function BookingsView({ bookings, properties = [], rooms = [], removeBooking, searchQuery = '' }) {
   const [copiedBookingId, setCopiedBookingId] = useState(null);
   const [generatingForId, setGeneratingForId] = useState(null);
-  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [viewingBooking, setViewingBooking] = useState(null);
 
   const handleGenerateBookingLink = async (booking) => {
     setGeneratingForId(booking.id);
@@ -1733,6 +1733,365 @@ function BookingsView({ bookings, properties = [], rooms = [], removeBooking, se
            b.id.toString().toLowerCase().includes(q) || 
            b.status.toLowerCase().includes(q);
   });
+
+  // If viewing a single booking order detail page (Shopify / Havoc CRM style)
+  if (viewingBooking) {
+    const b = viewingBooking;
+    const isPaid = (b.status || '').toLowerCase().includes('paid') || (b.status || '').toLowerCase().includes('confirmed');
+    const orderCode = b.id ? (b.id.toString().startsWith('#') ? b.id : `#ORD_${b.id.toString().substring(0, 8)}`) : '#ORD_001';
+    let checkInFormatted = '-';
+    let checkOutFormatted = '-';
+    try {
+      if (b.checkIn) checkInFormatted = format(parseISO(b.checkIn), 'dd MMM yyyy, hh:mm a');
+      if (b.checkOut) checkOutFormatted = format(parseISO(b.checkOut), 'dd MMM yyyy, hh:mm a');
+    } catch (e) {}
+
+    const selectedRoom = rooms.find(r => r.id === b.roomId);
+    const roomName = selectedRoom ? selectedRoom.name : 'Deluxe Executive Room';
+
+    return (
+      <div style={{ maxWidth: 1200, margin: '0 auto', paddingBottom: 60 }}>
+        {/* Breadcrumb Navigation */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', color: '#6B7280', marginBottom: 16 }}>
+          <button 
+            onClick={() => setViewingBooking(null)} 
+            style={{ background: 'none', border: 'none', color: '#4B5563', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, padding: 0, fontWeight: 500 }}
+          >
+            ← Orders
+          </button>
+          <span>&gt;</span>
+          <span style={{ color: '#111827', fontWeight: 600 }}>Order {orderCode}</span>
+        </div>
+
+        {/* Top Header Row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: 800, color: '#111827', letterSpacing: '-0.02em' }}>
+                Order {orderCode}
+              </h1>
+              <span style={{ 
+                padding: '4px 12px', 
+                borderRadius: 20, 
+                fontSize: '0.75rem', 
+                fontWeight: 700, 
+                letterSpacing: '0.04em',
+                backgroundColor: isPaid ? '#ECFDF5' : '#FEF3C7', 
+                color: isPaid ? '#059669' : '#D97706',
+                border: isPaid ? '1px solid #A7F3D0' : '1px solid #FDE68A'
+              }}>
+                {isPaid ? 'PAID' : 'PAYMENT PENDING'}
+              </span>
+              <span style={{ 
+                padding: '4px 12px', 
+                borderRadius: 20, 
+                fontSize: '0.75rem', 
+                fontWeight: 700, 
+                letterSpacing: '0.04em',
+                backgroundColor: '#EFF6FF', 
+                color: '#2563EB',
+                border: '1px solid #BFDBFE'
+              }}>
+                {b.status === 'Checked In' ? 'CHECKED IN' : b.status === 'Completed' ? 'COMPLETED' : 'CONFIRMED'}
+              </span>
+            </div>
+            <div style={{ fontSize: '0.85rem', color: '#6B7280', marginTop: 6 }}>
+              Placed on {b.createdAt ? b.createdAt : 'Recent Reservation'}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            {(!b.paymentMethod || b.paymentMethod.toLowerCase().includes('desk') || (b.status && b.status.includes('Pay at Desk'))) && (
+              <button
+                onClick={() => handleGenerateBookingLink(b)}
+                disabled={generatingForId === b.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor: '#2563EB',
+                  color: 'white',
+                  padding: '10px 18px',
+                  borderRadius: 10,
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  border: 'none',
+                  cursor: generatingForId === b.id ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)'
+                }}
+              >
+                <Link2 size={16} /> {copiedBookingId === b.id ? 'Link Copied!' : generatingForId === b.id ? 'Generating...' : 'Collect Payment'}
+              </button>
+            )}
+            <button
+              onClick={() => setViewingBooking(null)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: '#F3F4F6',
+                color: '#374151',
+                padding: '10px 16px',
+                borderRadius: 10,
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                border: '1px solid #D1D5DB',
+                cursor: 'pointer'
+              }}
+            >
+              Back to List
+            </button>
+          </div>
+        </div>
+
+        {/* Highlight Banner / Note */}
+        <div style={{ 
+          backgroundColor: '#FFFBEB', 
+          border: '1px solid #FCD34D', 
+          borderRadius: 14, 
+          padding: '16px 20px', 
+          marginBottom: 24, 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: '#92400E', fontSize: '0.88rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              <span>⭐</span> RESERVATION SUMMARY & STAY DETAILS
+            </div>
+            <div style={{ fontSize: '0.86rem', color: '#B45309', marginTop: 4 }}>
+              Guest scheduled for check-in at <strong>{b.hotelName}</strong>. Check-in: {checkInFormatted} • Check-out: {checkOutFormatted}
+            </div>
+          </div>
+          <span style={{ 
+            backgroundColor: '#78350F', 
+            color: '#FEF3C7', 
+            padding: '5px 12px', 
+            borderRadius: 8, 
+            fontSize: '0.78rem', 
+            fontWeight: 700, 
+            letterSpacing: '0.04em' 
+          }}>
+            {b.hotelName}
+          </span>
+        </div>
+
+        {/* 2-Column Main Layout: Left Side (Items & Payment Info), Right Side (Customer & Tags) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(300px, 1fr)', gap: 24, alignItems: 'start' }}>
+          
+          {/* Left Column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            
+            {/* Reserved Items Card */}
+            <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#111827' }}>
+                  Items ({b.rooms || 1})
+                </h3>
+              </div>
+
+              {/* Item Card Box */}
+              <div style={{ border: '1px solid #F3F4F6', borderRadius: 12, padding: 18, backgroundColor: '#FAFAFA' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#111827', textTransform: 'uppercase' }}>
+                        ROOM RESERVATION
+                      </span>
+                      <span style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: 4, 
+                        backgroundColor: '#FCE7F3', 
+                        color: '#BE185D', 
+                        padding: '3px 10px', 
+                        borderRadius: 16, 
+                        fontSize: '0.75rem', 
+                        fontWeight: 700 
+                      }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#BE185D' }}></span>
+                        {roomName}
+                      </span>
+                      <span style={{ 
+                        backgroundColor: '#EFF6FF', 
+                        color: '#1D4ED8', 
+                        padding: '3px 10px', 
+                        borderRadius: 16, 
+                        fontSize: '0.75rem', 
+                        fontWeight: 700 
+                      }}>
+                        {b.rooms || 1} Room(s)
+                      </span>
+                      <span style={{ 
+                        backgroundColor: isPaid ? '#ECFDF5' : '#FEF3C7', 
+                        color: isPaid ? '#059669' : '#D97706', 
+                        padding: '3px 10px', 
+                        borderRadius: 16, 
+                        fontSize: '0.75rem', 
+                        fontWeight: 700 
+                      }}>
+                        {isPaid ? 'PAID' : 'PENDING'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12, fontSize: '0.82rem', color: '#4B5563' }}>
+                      <span style={{ backgroundColor: '#EEF2FF', color: '#4338CA', padding: '3px 8px', borderRadius: 6, fontFamily: 'monospace', fontWeight: 600 }}>
+                        Ref: #{String(b.id).slice(0, 8)}
+                      </span>
+                      <span>Occupancy: {b.adults || 1} Adult(s) {b.children ? `• ${b.children} Child(ren)` : ''}</span>
+                    </div>
+
+                    <div style={{ marginTop: 10, fontSize: '0.84rem', color: '#4B5563' }}>
+                      <div><strong>Check-In:</strong> {checkInFormatted}</div>
+                      <div><strong>Check-Out:</strong> {checkOutFormatted}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#111827' }}>
+                      ₹{Number(b.amount || 0).toLocaleString('en-IN')}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#6B7280', marginTop: 2 }}>
+                      Inclusive of Taxes
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Info Card */}
+            <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#111827' }}>
+                  Payment Info
+                </h3>
+                <span style={{ 
+                  padding: '4px 10px', 
+                  borderRadius: 16, 
+                  fontSize: '0.75rem', 
+                  fontWeight: 700, 
+                  backgroundColor: isPaid ? '#ECFDF5' : '#FEF3C7', 
+                  color: isPaid ? '#059669' : '#D97706' 
+                }}>
+                  {isPaid ? 'PAID' : 'UNPAID'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: '0.9rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#6B7280' }}>
+                  <span>Tariff Subtotal</span>
+                  <span style={{ fontWeight: 600, color: '#111827' }}>₹{Number(b.amount || 0).toLocaleString('en-IN')}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#6B7280' }}>
+                  <span>Payment Channel</span>
+                  <span style={{ fontWeight: 600, color: '#111827' }}>{b.paymentMethod || 'Pay at Desk'}</span>
+                </div>
+                {b.txnId && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#6B7280' }}>
+                    <span>Gateway Transaction ID</span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#1E40AF' }}>{b.txnId}</span>
+                  </div>
+                )}
+                {b.refundStatus && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#7C3AED' }}>
+                    <span>Refund Status</span>
+                    <span style={{ fontWeight: 700 }}>{b.refundStatus} (₹{Number(b.refundAmount || 0).toLocaleString('en-IN')})</span>
+                  </div>
+                )}
+                <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: 12, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>
+                  <span>Total Amount</span>
+                  <span style={{ color: '#059669' }}>₹{Number(b.amount || 0).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Right Column: Customer Info & Tags */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            
+            {/* Customer Info Card */}
+            <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 22, boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>Order info</h4>
+              </div>
+
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
+                CONTACT INFO
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                <div style={{ 
+                  width: 40, 
+                  height: 40, 
+                  borderRadius: '50%', 
+                  backgroundColor: '#FEE2E2', 
+                  color: '#DC2626', 
+                  fontWeight: 800, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  fontSize: '1rem' 
+                }}>
+                  {(b.name || 'G').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, color: '#111827', fontSize: '0.98rem' }}>{b.name || 'Guest'}</div>
+                  <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>Verified Guest</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.86rem', color: '#4B5563' }}>
+                <div>
+                  <span style={{ color: '#9CA3AF' }}>Email: </span>
+                  <span style={{ color: '#111827', fontWeight: 500 }}>{b.email || 'Not provided'}</span>
+                </div>
+                <div>
+                  <span style={{ color: '#9CA3AF' }}>Phone: </span>
+                  <span style={{ color: '#111827', fontWeight: 500 }}>{b.phone || 'Not provided'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tags Card */}
+            <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 22, boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', fontWeight: 700, color: '#374151', marginBottom: 12 }}>
+                <Tag size={15} color="#D97706" /> Tags
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <span style={{ 
+                  padding: '6px 12px', 
+                  borderRadius: 8, 
+                  fontSize: '0.82rem', 
+                  fontWeight: 600, 
+                  backgroundColor: '#F3F4F6', 
+                  color: '#4B5563',
+                  border: '1px solid #E5E7EB' 
+                }}>
+                  {b.paymentMethod || '[Cash / Desk]'}
+                </span>
+                <span style={{ 
+                  padding: '6px 12px', 
+                  borderRadius: 8, 
+                  fontSize: '0.82rem', 
+                  fontWeight: 600, 
+                  backgroundColor: '#EFF6FF', 
+                  color: '#1E40AF',
+                  border: '1px solid #DBEAFE' 
+                }}>
+                  {b.hotelName}
+                </span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -1778,7 +2137,22 @@ function BookingsView({ bookings, properties = [], rooms = [], removeBooking, se
           <tbody>
             {filteredBookings.map((b, idx) => (
               <tr key={b.id} style={{ borderBottom: idx === filteredBookings.length - 1 ? 'none' : '1px solid #E5E7EB' }}>
-                <td data-label="Booking ID" style={{ ...tdStyle, color: '#6B7280', fontSize: '0.85rem' }}>#{b.id.toString().substring(0,8)}</td>
+                <td data-label="Booking ID" style={{ ...tdStyle, color: '#6B7280', fontSize: '0.85rem' }}>
+                  <button
+                    onClick={() => setViewingBooking(b)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#2563EB',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      padding: 0,
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    #{b.id.toString().substring(0,8)}
+                  </button>
+                </td>
                 <td data-label="Guest" style={{ ...tdStyle, fontWeight: 500, color: '#111827', textAlign: 'right' }}>
                   <div style={{ fontWeight: 600, color: '#111827' }}>{b.name}</div>
                   {(b.phone || b.email) && (
@@ -1809,8 +2183,8 @@ function BookingsView({ bookings, properties = [], rooms = [], removeBooking, se
                 </td>
                 <td className="actions-cell" style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
                   <button
-                    onClick={() => setSelectedBooking(b)}
-                    title="View complete booking details"
+                    onClick={() => setViewingBooking(b)}
+                    title="View complete booking order details"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1826,7 +2200,7 @@ function BookingsView({ bookings, properties = [], rooms = [], removeBooking, se
                       cursor: 'pointer'
                     }}
                   >
-                    <Eye size={13} /> Details
+                    <Eye size={13} /> View Order
                   </button>
                   {(!b.paymentMethod || b.paymentMethod.toLowerCase().includes('desk') || (b.status && b.status.includes('Pay at Desk'))) && (
                     <button
