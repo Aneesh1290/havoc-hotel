@@ -129,6 +129,53 @@ db.exec(`
     paidAt TEXT,
     createdAt TEXT DEFAULT CURRENT_TIMESTAMP
   );
+
+  -- Zero-drop S2S Payment Audit Logs table
+  CREATE TABLE IF NOT EXISTS payment_gateway_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gateway TEXT DEFAULT 'ICICI_ORANGE_PG',
+    merchant_txn_no TEXT,
+    gateway_txn_id TEXT,
+    amount REAL,
+    status TEXT,
+    response_code TEXT,
+    signature_valid INTEGER DEFAULT 0,
+    callback_type TEXT DEFAULT 'POST_CALLBACK', -- POST_CALLBACK, GET_CALLBACK, S2S_ADVICE, S2S_RECONCILE
+    raw_payload TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  -- Temporary Room Checkout Holds table to persist active payment sessions safely across server restarts
+  CREATE TABLE IF NOT EXISTS pending_payment_holds (
+    merchant_txn_no TEXT PRIMARY KEY,
+    booking_id INTEGER,
+    link_id TEXT,
+    is_payment_link INTEGER DEFAULT 0,
+    hotel_id TEXT,
+    hotel_name TEXT,
+    room_id TEXT,
+    room_name TEXT,
+    rooms_count INTEGER DEFAULT 1,
+    check_in TEXT,
+    check_out TEXT,
+    guest_name TEXT,
+    guest_email TEXT,
+    guest_phone TEXT,
+    adults INTEGER DEFAULT 1,
+    children INTEGER DEFAULT 0,
+    notes TEXT,
+    amount REAL NOT NULL,
+    status TEXT DEFAULT 'PENDING', -- PENDING, CONFIRMED, FAILED, EXPIRED, CANCELLED
+    gateway_txn_id TEXT,
+    payment_mode TEXT,
+    expires_at TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_payment_gateway_logs_txn ON payment_gateway_logs(merchant_txn_no);
+  CREATE INDEX IF NOT EXISTS idx_pending_holds_status ON pending_payment_holds(status, created_at);
+  CREATE INDEX IF NOT EXISTS idx_bookings_icici ON bookings(iciciOrderId, txnId);
 `);
 
 // Purge any automatic test dummy offers

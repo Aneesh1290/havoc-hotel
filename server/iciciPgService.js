@@ -167,15 +167,20 @@ export function verifyCallbackHash(postParams) {
 }
 
 /**
- * Status Check API
+ * Status Check API (Pull)
+ * Calls ICICI command API via application/x-www-form-urlencoded
+ * Payload: merchantId, aggregatorID, transactionType: "STATUS", merchantTxnNo, originalTxnNo, secureHash
  */
 export async function checkTransactionStatus({ merchantTxnNo, originalTxnNo }) {
   const cfg = getConfig();
 
+  const cleanMerchantTxnNo = String(merchantTxnNo || '').trim().slice(0, 20);
+  const cleanOriginalTxnNo = String(originalTxnNo || merchantTxnNo || '').trim().slice(0, 20);
+
   const requestPayload = {
     merchantId: cfg.mid,
-    merchantTxnNo: String(merchantTxnNo).slice(0, 20),
-    originalTxnNo: String(originalTxnNo || merchantTxnNo).slice(0, 20),
+    merchantTxnNo: cleanMerchantTxnNo,
+    originalTxnNo: cleanOriginalTxnNo,
     transactionType: 'STATUS'
   };
 
@@ -186,17 +191,57 @@ export async function checkTransactionStatus({ merchantTxnNo, originalTxnNo }) {
   const secureHash = generateHmacDigest(requestPayload, cfg.key);
   requestPayload.secureHash = secureHash;
 
+  console.log(`[ICICI-PG] Calling checkTransactionStatus [${cfg.env}] merchantTxnNo: ${requestPayload.merchantTxnNo}, originalTxnNo: ${requestPayload.originalTxnNo}`);
+
   const formBody = Object.keys(requestPayload)
     .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(requestPayload[key]))
     .join('&');
 
-  const response = await fetch(cfg.statusCheckUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: formBody
-  });
+  try {
+    const response = await fetch(cfg.statusCheckUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formBody
+    });
 
-  return await response.json();
+    const responseJson = await response.json();
+    console.log('[ICICI-PG] checkTransactionStatus response:', responseJson);
+
+    const respCode = String(responseJson.responseCode || '').trim();
+    const statusStr = String(responseJson.status || responseJson.txnStatus || '').toUpperCase().trim();
+    const isPaid = respCode === '0000' || respCode === '000' || respCode === '0' || statusStr === 'SUC' || statusStr === 'SUCCESS';
+
+    return {
+      success: true,
+      isPaid,
+      txnID: responseJson.txnID || responseJson.originalTxnNo || null,
+      amount: responseJson.amount ? Number(responseJson.amount) : null,
+      responseCode: respCode,
+      description: responseJson.respDescription || responseJson.responseDescription || statusStr,
+      paymentMode: responseJson.paymentMode || responseJson.payMode || 'Online',
+      raw: responseJson
+    };
+  } catch (err) {
+    console.error('[ICICI-PG] Error in checkTransactionStatus:', err);
+    return {
+      success: false,
+      isPaid: false,
+      txnID: null,
+      amount: null,
+      responseCode: 'ERROR',
+      description: err.message,
+      paymentMode: 'Online',
+      raw: null
+    };
+  }
+}
+
+/**
+ * Convenience alias matching the prompt specification:
+ * checkIciciPaymentStatus(merchantTxnNo, originalTxnNo)
+ */
+export async function checkIciciPaymentStatus(merchantTxnNo, originalTxnNo) {
+  return await checkTransactionStatus({ merchantTxnNo, originalTxnNo });
 }
 
 /**

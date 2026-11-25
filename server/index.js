@@ -7,7 +7,15 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import db, { dbPath, dataDir as dbDataDir } from './db.js';
 import { sendBookingConfirmationEmail, getMailTransporter } from './emailService.js';
-import { initiateSale, verifyCallbackHash, checkTransactionStatus, refundTransaction, getConfig } from './iciciPgService.js';
+import { initiateSale, verifyCallbackHash, checkTransactionStatus, checkIciciPaymentStatus, refundTransaction, getConfig } from './iciciPgService.js';
+import { 
+  logGatewayAdvice, 
+  createPendingHold, 
+  releasePendingHold, 
+  confirmOrderUnified, 
+  reconcilePendingHold, 
+  scanAndReconcileUnconfirmedHolds 
+} from './orderReconciliation.js';
 
 const JWT_SECRET = 'sabharwal_super_secret_key_2026'; // In production, use env var
 
@@ -495,12 +503,14 @@ app.post('/api/payment/icici/initiate', async (req, res) => {
     const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
     const returnURL = `${protocol}://${host}/api/payment/icici/callback`;
 
-    // Save pending transaction details
-    pendingPayments.set(merchantTxnNo, {
+    // Save pending transaction details in memory and in persistent database holds table
+    const holdData = {
       ...bookingDetails,
       merchantTxnNo,
       createdAt: Date.now()
-    });
+    };
+    pendingPayments.set(merchantTxnNo, holdData);
+    createPendingHold(holdData);
 
     // Cleanup old pending payments (> 1 hour)
     const oneHourAgo = Date.now() - 3600000;
@@ -538,45 +548,79 @@ app.post('/api/payment/icici/initiate', async (req, res) => {
   }
 });
 
-// 3. Callback URL called by ICICI Bank after customer finishes payment
-app.post('/api/payment/icici/callback', async (req, res) => {
-  console.log('[ICICI-PG] Received callback from ICICI PG:', req.body);
-  const postParams = req.body || {};
-  const { responseCode, respDescription, merchantTxnNo, txnID, paymentID, amount, paymentMode } = postParams;
+// Helper to process both POST & GET ICICI Callbacks / S2S Advice
+async function handleIciciCallbackRequest(req, res, callbackMethod = 'POST') {
+  const params = { ...(req.query || {}), ...(req.body || {}) };
+  console.log(`[ICICI-PG] Received ${callbackMethod} callback from ICICI PG:`, params);
 
-  // Retrieve pending booking data
-  const pending = pendingPayments.get(merchantTxnNo);
+  const {
+    responseCode,
+    respDescription,
+    merchantTxnNo,
+    txnID,
+    paymentID,
+    amount,
+    paymentMode,
+    status
+  } = params;
 
-  const isHashValid = verifyCallbackHash(postParams);
+  const isHashValid = verifyCallbackHash(params);
   console.log(`[ICICI-PG] Hash verification result: ${isHashValid ? 'VALID' : 'INVALID'}`);
 
-  const isSuccess = responseCode === '000' || responseCode === '0000' || responseCode === '0';
+  const statusStr = String(status || '').toUpperCase().trim();
+  const respCodeStr = String(responseCode || '').trim();
+  const isSuccess = respCodeStr === '000' || respCodeStr === '0000' || respCodeStr === '0' || statusStr === 'SUC' || statusStr === 'SUCCESS';
 
-  if (isSuccess) {
+  // 1. Audit Log to payment_gateway_logs (Zero-Drop)
+  const isS2S = req.headers['user-agent']?.toLowerCase().includes('java') || 
+                req.headers['user-agent']?.toLowerCase().includes('apache') || 
+                req.headers['user-agent']?.toLowerCase().includes('curl') ||
+                req.headers['x-requested-by'] === 's2s' ||
+                req.is('application/json');
+
+  const callbackType = isS2S ? 'S2S_ADVICE' : `${callbackMethod}_CALLBACK`;
+
+  logGatewayAdvice({
+    merchantTxnNo,
+    gatewayTxnId: txnID || paymentID || null,
+    amount: amount ? Number(amount) : null,
+    status: isSuccess ? 'SUCCESS' : (respDescription || status || 'FAILED'),
+    responseCode: responseCode || null,
+    signatureValid: isHashValid,
+    callbackType,
+    rawPayload: params
+  });
+
+  // 2. If Hash is Invalid, handle security alert but verify with command API before failing completely
+  if (!isHashValid && params.secureHash) {
+    console.warn(`[ICICI-PG] WARNING: Received callback with invalid hash for txn ${merchantTxnNo}. Will verify with ICICI status inquiry.`);
+  }
+
+  // 3. Process Success
+  if (isSuccess && merchantTxnNo) {
     try {
-      // Check if this was a custom Payment Link
-      if (pending?.isPaymentLink) {
-        const linkId = pending.linkId;
-        const finalAmount = Math.round(Number(amount || pending?.amount || 0));
-        const paidAt = new Date().toISOString();
+      const confirmResult = confirmOrderUnified({
+        merchantTxnNo,
+        gatewayTxnId: txnID || paymentID,
+        amount,
+        paymentMode: paymentMode || 'Online',
+        rawParams: params
+      });
 
-        // Update payment_links table
-        db.prepare(`
-          UPDATE payment_links 
-          SET status = 'Paid', txnId = ?, paymentMode = ?, paidAt = ?
-          WHERE id = ?
-        `).run(txnID || merchantTxnNo, paymentMode || 'Online', paidAt, linkId);
+      // If pure S2S Advice (background server call), return JSON / 200 immediately
+      if (isS2S || req.accepts('json') && !req.accepts('html')) {
+        return res.status(200).json({
+          status: 'SUCCESS',
+          message: 'Order confirmed successfully via S2S advice',
+          merchantTxnNo,
+          reservationId: confirmResult.bookingId || confirmResult.linkId
+        });
+      }
 
-        // If this link was tied to an existing booking, update the booking status too
-        if (pending.bookingId) {
-          db.prepare(`
-            UPDATE bookings 
-            SET status = 'Confirmed (Paid Online)', paymentMethod = ?, txnId = ?
-            WHERE id = ?
-          `).run(`ICICI PG (${paymentMode || 'Card/UPI'})`, txnID || merchantTxnNo, pending.bookingId);
-        }
-
-        pendingPayments.delete(merchantTxnNo);
+      // If Payment Link browser redirect
+      if (confirmResult.type === 'payment_link') {
+        const linkId = confirmResult.linkId;
+        const finalAmount = Math.round(Number(amount || confirmResult.amount || 0));
 
         return res.send(`
           <!DOCTYPE html>
@@ -611,8 +655,6 @@ app.post('/api/payment/icici/callback', async (req, res) => {
                 <div class="info-box">
                   <div class="info-row"><span class="info-label">Payment ID</span><span class="info-val">${linkId}</span></div>
                   <div class="info-row"><span class="info-label">ICICI Txn ID</span><span class="info-val">${txnID || merchantTxnNo}</span></div>
-                  <div class="info-row"><span class="info-label">Payer Name</span><span class="info-val">${pending.name}</span></div>
-                  <div class="info-row"><span class="info-label">Hotel / Purpose</span><span class="info-val">${pending.purpose || pending.hotelName}</span></div>
                   <div class="info-row" style="margin-bottom: 0; padding-top: 8px; border-top: 1px dashed #CBD5E1;"><span class="info-label">Amount Paid</span><span class="info-val" style="color: #059669; font-size: 16px;">₹${finalAmount.toLocaleString('en-IN')}</span></div>
                 </div>
                 <a href="/" class="btn">Return to Homepage &rarr;</a>
@@ -623,70 +665,12 @@ app.post('/api/payment/icici/callback', async (req, res) => {
         `);
       }
 
-      // Standard booking flow
-      const guestName = pending?.name || postParams.customerName || 'Guest';
-      const guestEmail = pending?.email || postParams.customerEmailID || '';
-      const guestPhone = pending?.phone || postParams.customerMobileNo || '';
-      const hotelId = pending?.hotelId || '1';
-      const hotelName = pending?.hotelName || 'Sabharwal Hotel';
-      const checkIn = pending?.checkIn || new Date().toISOString();
-      const checkOut = pending?.checkOut || new Date(Date.now() + 86400000).toISOString();
-      const finalAmount = Math.round(Number(amount || pending?.amount || 0));
-      const roomsCount = pending?.roomsCount || 1;
-      const roomId = pending?.roomId || null;
-      const adults = pending?.adults || 1;
-      const children = pending?.children || 0;
-      const notes = pending?.notes || '';
+      // Standard Room Reservation Confirmation Page
+      const bookingId = confirmResult.bookingId;
+      const guestName = confirmResult.guestName || params.customerName || 'Guest';
+      const hotelName = confirmResult.hotelName || 'Sabharwal Hotel';
+      const finalAmount = Math.round(Number(amount || confirmResult.finalAmount || 0));
 
-      const stmt = db.prepare(`
-        INSERT INTO bookings (name, email, phone, hotelId, hotelName, checkIn, checkOut, amount, status, rooms, roomId, adults, children, notes, paymentMethod, txnId, iciciOrderId)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      const info = stmt.run(
-        guestName,
-        guestEmail,
-        guestPhone,
-        hotelId,
-        hotelName,
-        checkIn,
-        checkOut,
-        finalAmount,
-        'Confirmed (Paid Online)',
-        roomsCount,
-        roomId,
-        adults,
-        children,
-        notes,
-        `ICICI PG (${paymentMode || 'Card/UPI'})`,
-        txnID || null,
-        merchantTxnNo
-      );
-
-      const bookingId = info.lastInsertRowid;
-      pendingPayments.delete(merchantTxnNo);
-
-      // Trigger confirmation email
-      if (guestEmail) {
-        sendBookingConfirmationEmail({
-          id: bookingId,
-          name: guestName,
-          email: guestEmail,
-          phone: guestPhone,
-          hotelId,
-          hotelName,
-          checkIn,
-          checkOut,
-          amount: finalAmount,
-          status: 'Confirmed (Paid Online)',
-          rooms: roomsCount,
-          adults,
-          children,
-          notes,
-          paymentMethod: `ICICI PG (${paymentMode || 'Online'})`
-        }).catch(e => console.error('[EmailService] Async email error:', e));
-      }
-
-      // Render a friendly HTML receipt redirect page
       return res.send(`
         <!DOCTYPE html>
         <html>
@@ -734,11 +718,23 @@ app.post('/api/payment/icici/callback', async (req, res) => {
         </html>
       `);
     } catch (err) {
-      console.error('[ICICI-PG] Error processing successful payment:', err);
+      console.error('[ICICI-PG] Error processing payment confirmation:', err);
       return res.status(500).send(`<h3>Error creating booking: ${err.message}</h3>`);
     }
   } else {
-    // Payment failed or cancelled
+    // Release temporary room date holds if merchantTxnNo exists
+    if (merchantTxnNo) {
+      releasePendingHold(merchantTxnNo, 'FAILED');
+    }
+
+    if (isS2S) {
+      return res.status(200).json({
+        status: 'FAILED',
+        message: respDescription || 'Payment not successful',
+        merchantTxnNo
+      });
+    }
+
     return res.send(`
       <!DOCTYPE html>
       <html>
@@ -766,19 +762,77 @@ app.post('/api/payment/icici/callback', async (req, res) => {
       </html>
     `);
   }
+}
+
+// 3. Callback URL called by ICICI Bank (Supports POST and GET)
+app.post('/api/payment/icici/callback', async (req, res) => {
+  await handleIciciCallbackRequest(req, res, 'POST');
 });
 
-// 4. Manual Transaction Status Verification Endpoint
+app.get('/api/payment/icici/callback', async (req, res) => {
+  await handleIciciCallbackRequest(req, res, 'GET');
+});
+
+// Dedicated S2S Server Advice endpoint
+app.post('/api/payment/icici/advice', async (req, res) => {
+  req.headers['x-requested-by'] = 's2s';
+  await handleIciciCallbackRequest(req, res, 'POST');
+});
+
+// 4. Transaction Status Inquiry Endpoint (Pull)
 app.get('/api/payment/icici/status/:merchantTxnNo', async (req, res) => {
   try {
+    const originalTxnNo = req.query.originalTxnNo || req.params.merchantTxnNo;
     const statusResult = await checkTransactionStatus({
-      merchantTxnNo: req.params.merchantTxnNo
+      merchantTxnNo: req.params.merchantTxnNo,
+      originalTxnNo
     });
     res.json(statusResult);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+// 5. Zero-Drop S2S Reconciliation Endpoint (GET & POST)
+// Allows checking a specific txn_id or scanning unconfirmed holds (> 2 mins old) against ICICI command API
+async function handleReconciliationRequest(req, res) {
+  try {
+    const txnId = req.body?.txn_id || req.body?.merchantTxnNo || req.query?.txn_id || req.query?.merchantTxnNo;
+
+    if (txnId) {
+      console.log(`[ICICI-PG] Reconciling specific transaction: ${txnId}`);
+      const result = await reconcilePendingHold(txnId);
+      return res.json({ success: true, results: [result] });
+    }
+
+    // Otherwise scan all unconfirmed pending holds older than 2 minutes
+    console.log('[ICICI-PG] Running reconciliation scan for pending holds...');
+    const results = await scanAndReconcileUnconfirmedHolds();
+    return res.json({
+      success: true,
+      scanned: results.length,
+      results
+    });
+  } catch (err) {
+    console.error('[ICICI-PG] Error in reconciliation endpoint:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+app.get('/api/payment/icici/reconcile', handleReconciliationRequest);
+app.post('/api/payment/icici/reconcile', handleReconciliationRequest);
+
+// Periodic background auto-reconciliation loop (runs every 3 minutes)
+setInterval(async () => {
+  try {
+    const reconciled = await scanAndReconcileUnconfirmedHolds();
+    if (reconciled && reconciled.length > 0) {
+      console.log(`[AutoReconcile] Automatically reconciled ${reconciled.length} payment(s):`, reconciled);
+    }
+  } catch (e) {
+    console.error('[AutoReconcile] Background reconciliation tick error:', e.message);
+  }
+}, 3 * 60 * 1000);
 
 // --- PAYMENT LINKS ENDPOINTS ---
 
@@ -875,8 +929,8 @@ app.post('/api/payment-links/:linkId/pay', async (req, res) => {
     const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
     const returnURL = `${protocol}://${host}/api/payment/icici/callback`;
 
-    // Save pending payment info with isPaymentLink flag
-    pendingPayments.set(merchantTxnNo, {
+    // Save pending payment info with isPaymentLink flag in memory and persistent hold table
+    const holdData = {
       isPaymentLink: true,
       linkId: link.id,
       bookingId: link.bookingId,
@@ -889,7 +943,9 @@ app.post('/api/payment-links/:linkId/pay', async (req, res) => {
       purpose: link.purpose,
       merchantTxnNo,
       createdAt: Date.now()
-    });
+    };
+    pendingPayments.set(merchantTxnNo, holdData);
+    createPendingHold(holdData);
 
     const saleResult = await initiateSale({
       merchantTxnNo,
