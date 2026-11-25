@@ -39,18 +39,22 @@ export function logGatewayAdvice({
 
 /**
  * Create or update a temporary room checkout hold
+ * Stores full cart details, items, contact info, and initial hold window
  */
 export function createPendingHold(holdData) {
   try {
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 min hold window
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15-minute active hold window
+    const itemsJson = holdData.items_json || (holdData.items ? JSON.stringify(holdData.items) : null);
+
     const stmt = db.prepare(`
       INSERT INTO pending_payment_holds
       (merchant_txn_no, booking_id, link_id, is_payment_link, hotel_id, hotel_name, room_id, room_name,
-       rooms_count, check_in, check_out, guest_name, guest_email, guest_phone, adults, children, notes, amount,
+       rooms_count, check_in, check_out, guest_name, guest_email, guest_phone, adults, children, notes, items_json, amount,
        status, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?)
       ON CONFLICT(merchant_txn_no) DO UPDATE SET
         amount = excluded.amount,
+        items_json = excluded.items_json,
         status = 'PENDING',
         expires_at = excluded.expires_at,
         updated_at = CURRENT_TIMESTAMP
@@ -74,24 +78,120 @@ export function createPendingHold(holdData) {
       holdData.adults || 1,
       holdData.children || 0,
       holdData.notes || '',
+      itemsJson,
       Number(holdData.amount || 0),
       expiresAt
     );
+
+    // Also mirror to permanent archive immediately for 100% retention
+    archiveCheckoutHold(holdData.merchantTxnNo, 'INITIAL_INITIATION');
   } catch (err) {
     console.error('[OrderReconciliation] Error creating pending hold:', err);
   }
 }
 
 /**
+ * Permanently archive a checkout hold so customer and order data are never lost
+ */
+export function archiveCheckoutHold(merchantTxnNo, reason = 'EXPIRED') {
+  try {
+    const cleanTxn = String(merchantTxnNo || '').trim();
+    const hold = db.prepare('SELECT * FROM pending_payment_holds WHERE merchant_txn_no = ?').get(cleanTxn);
+    if (!hold) return;
+
+    db.prepare(`
+      INSERT INTO online_checkout_holds_archive
+      (merchant_txn_no, booking_id, link_id, is_payment_link, hotel_id, hotel_name, room_id, room_name,
+       rooms_count, check_in, check_out, guest_name, guest_email, guest_phone, adults, children, notes, items_json,
+       amount, status, gateway_txn_id, payment_mode, archived_reason, original_created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      hold.merchant_txn_no,
+      hold.booking_id,
+      hold.link_id,
+      hold.is_payment_link,
+      hold.hotel_id,
+      hold.hotel_name,
+      hold.room_id,
+      hold.room_name,
+      hold.rooms_count,
+      hold.check_in,
+      hold.check_out,
+      hold.guest_name,
+      hold.guest_email,
+      hold.guest_phone,
+      hold.adults,
+      hold.children,
+      hold.notes,
+      hold.items_json,
+      hold.amount,
+      hold.status,
+      hold.gateway_txn_id,
+      hold.payment_mode,
+      reason,
+      hold.created_at
+    );
+  } catch (err) {
+    console.error(`[OrderReconciliation] Error archiving hold ${merchantTxnNo}:`, err);
+  }
+}
+
+/**
+ * getOnlineCheckoutHold(merchantTxnNo)
+ * Checks active pending_payment_holds first.
+ * If not found, checks online_checkout_holds_archive.
+ * Guarantees that whether ICICI responds in 5 seconds or 2 hours, full customer details are recovered.
+ */
+export function getOnlineCheckoutHold(merchantTxnNo) {
+  try {
+    const cleanTxn = String(merchantTxnNo || '').trim();
+    if (!cleanTxn) return null;
+
+    // 1. Check active holds
+    const activeHold = db.prepare('SELECT * FROM pending_payment_holds WHERE merchant_txn_no = ?').get(cleanTxn);
+    if (activeHold) {
+      return {
+        ...activeHold,
+        source: 'active_holds'
+      };
+    }
+
+    // 2. Check archive table
+    const archivedHold = db.prepare(`
+      SELECT * FROM online_checkout_holds_archive 
+      WHERE merchant_txn_no = ? 
+      ORDER BY id DESC LIMIT 1
+    `).get(cleanTxn);
+
+    if (archivedHold) {
+      console.log(`[OrderReconciliation] Retrieved hold from archive for merchantTxnNo: ${cleanTxn}`);
+      return {
+        ...archivedHold,
+        source: 'archive'
+      };
+    }
+
+    return null;
+  } catch (err) {
+    console.error(`[OrderReconciliation] Error getting online checkout hold for ${merchantTxnNo}:`, err);
+    return null;
+  }
+}
+
+/**
  * Release a temporary room hold upon failure or cancellation
+ * Releases inventory lock but retains full record in archive table
  */
 export function releasePendingHold(merchantTxnNo, reason = 'CANCELLED') {
   try {
+    const cleanTxn = String(merchantTxnNo || '').trim();
+    archiveCheckoutHold(cleanTxn, reason);
+
     db.prepare(`
       UPDATE pending_payment_holds 
       SET status = ?, updated_at = CURRENT_TIMESTAMP 
       WHERE merchant_txn_no = ? AND status = 'PENDING'
-    `).run(reason, merchantTxnNo);
+    `).run(reason, cleanTxn);
   } catch (err) {
     console.error('[OrderReconciliation] Error releasing pending hold:', err);
   }
@@ -136,8 +236,8 @@ export function confirmOrderUnified({
       };
     }
 
-    // 2. Load hold data if available from database
-    const hold = holdDetails || db.prepare('SELECT * FROM pending_payment_holds WHERE merchant_txn_no = ?').get(cleanMerchantTxn);
+    // 2. Load hold data if available from database (checks active holds first, then archive)
+    const hold = holdDetails || getOnlineCheckoutHold(cleanMerchantTxn);
 
     // 3. Check if this is a Payment Link
     if (hold?.is_payment_link || hold?.isPaymentLink || hold?.link_id || hold?.linkId) {
@@ -176,6 +276,7 @@ export function confirmOrderUnified({
 
         db.prepare(`UPDATE pending_payment_holds SET status = 'CONFIRMED', gateway_txn_id = ?, payment_mode = ?, updated_at = CURRENT_TIMESTAMP WHERE merchant_txn_no = ?`)
           .run(cleanGatewayTxn || cleanMerchantTxn, paymentMode, cleanMerchantTxn);
+        archiveCheckoutHold(cleanMerchantTxn, 'PAYMENT_CONFIRMED');
 
         return {
           alreadyConfirmed: false,
@@ -186,12 +287,17 @@ export function confirmOrderUnified({
       }
     }
 
-    // 4. Standard Room Reservation Confirmation & Inventory Locking
-    const guestName = hold?.guest_name || hold?.name || rawParams.customerName || 'Guest';
-    const guestEmail = hold?.guest_email || hold?.email || rawParams.customerEmailID || '';
-    const guestPhone = hold?.guest_phone || hold?.phone || rawParams.customerMobileNo || '';
-    const hotelId = hold?.hotel_id || hold?.hotelId || '1';
-    const hotelName = hold?.hotel_name || hold?.hotelName || 'Hotel Sabharwal';
+    // 4. Standard Room Reservation Confirmation & Safety Recovery
+    // Extract available customer information from hold, archive, or fallback to ICICI response payload
+    const rawCustomerName = rawParams.customerName || rawParams.responseParams?.customerName || rawParams.addlParam1 || null;
+    const rawCustomerEmail = rawParams.customerEmailID || rawParams.customerEmail || rawParams.responseParams?.customerEmailID || null;
+    const rawCustomerMobile = rawParams.customerMobileNo || rawParams.customerPhone || rawParams.responseParams?.customerMobileNo || null;
+
+    const guestName = hold?.guest_name || hold?.name || rawCustomerName || 'Online Guest';
+    const guestEmail = hold?.guest_email || hold?.email || rawCustomerEmail || '';
+    const guestPhone = hold?.guest_phone || hold?.phone || rawCustomerMobile || '';
+    const hotelId = hold?.hotel_id || hold?.hotelId || rawParams.addlParam2 || '1';
+    const hotelName = hold?.hotel_name || hold?.hotelName || rawParams.addlParam1 || 'Hotel Sabharwal';
     const checkIn = hold?.check_in || hold?.checkIn || new Date().toISOString();
     const checkOut = hold?.check_out || hold?.checkOut || new Date(Date.now() + 86400000).toISOString();
     const finalAmount = Math.round(Number(amount || hold?.amount || 0));
@@ -199,7 +305,22 @@ export function confirmOrderUnified({
     const roomId = hold?.room_id || hold?.roomId || null;
     const adults = Number(hold?.adults || 1);
     const children = Number(hold?.children || 0);
-    const notes = hold?.notes || '';
+    const notes = hold?.notes || (hold ? '' : '[Safety Recovery] Order recovered from ICICI gateway advice without active hold');
+
+    // If hold was completely missing, log safety alert in payment_gateway_logs
+    if (!hold) {
+      console.warn(`[OrderReconciliation] ALERT: Hold record missing for paid txn ${cleanMerchantTxn}. Executing safety recovery booking for ₹${finalAmount}.`);
+      logGatewayAdvice({
+        merchantTxnNo: cleanMerchantTxn,
+        gatewayTxnId: cleanGatewayTxn,
+        amount: finalAmount,
+        status: 'SAFETY_RECOVERY_CREATED',
+        responseCode: rawParams.responseCode || '000',
+        signatureValid: true,
+        callbackType: 'SAFETY_RECOVERY',
+        rawPayload: { alert: 'Hold was missing from DB and archive. Safety booking created.', rawParams }
+      });
+    }
 
     // Insert confirmed reservation
     const stmt = db.prepare(`
@@ -230,12 +351,13 @@ export function confirmOrderUnified({
 
     const bookingId = info.lastInsertRowid;
 
-    // Mark pending hold as CONFIRMED & locked
+    // Mark pending hold as CONFIRMED & archive
     db.prepare(`
       UPDATE pending_payment_holds 
       SET status = 'CONFIRMED', gateway_txn_id = ?, payment_mode = ?, updated_at = CURRENT_TIMESTAMP 
       WHERE merchant_txn_no = ?
     `).run(cleanGatewayTxn || cleanMerchantTxn, paymentMode, cleanMerchantTxn);
+    archiveCheckoutHold(cleanMerchantTxn, 'PAYMENT_CONFIRMED');
 
     // Send asynchronous confirmation email/voucher if email provided
     if (guestEmail) {
@@ -344,6 +466,43 @@ export async function reconcilePendingHold(merchantTxnNo) {
 }
 
 /**
+ * Capacity & Concurrency Hold Query Window:
+ * Returns the number of currently active held units for a specific property/room across a date window.
+ * ONLY treats holds younger than 15 minutes as active blocks so abandoned checkouts don't indefinitely block slots.
+ */
+export function getActiveHeldRoomCount({ hotelId, roomId, checkIn, checkOut }) {
+  try {
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    let query = `
+      SELECT SUM(rooms_count) as total_held
+      FROM pending_payment_holds
+      WHERE status = 'PENDING'
+        AND created_at >= ?
+    `;
+    const params = [fifteenMinutesAgo];
+
+    if (hotelId) {
+      query += ' AND hotel_id = ?';
+      params.push(String(hotelId));
+    }
+    if (roomId) {
+      query += ' AND room_id = ?';
+      params.push(String(roomId));
+    }
+    if (checkIn && checkOut) {
+      query += ' AND check_in < ? AND check_out > ?';
+      params.push(checkOut, checkIn);
+    }
+
+    const row = db.prepare(query).get(...params);
+    return row?.total_held ? Number(row.total_held) : 0;
+  } catch (err) {
+    console.error('[OrderReconciliation] Error querying active held room count:', err);
+    return 0;
+  }
+}
+
+/**
  * Scan all pending holds older than 2 minutes and reconcile against ICICI Gateway
  */
 export async function scanAndReconcileUnconfirmedHolds() {
@@ -369,5 +528,47 @@ export async function scanAndReconcileUnconfirmedHolds() {
   } catch (err) {
     console.error('[OrderReconciliation] Error in scanAndReconcileUnconfirmedHolds:', err);
     return [];
+  }
+}
+
+/**
+ * getBookedQuantities helper
+ * Returns total confirmed booked units plus active temporary holds younger than 15 minutes.
+ */
+export function getBookedQuantities({ hotelId, roomId, checkIn, checkOut }) {
+  try {
+    // 1. Confirmed bookings in date range
+    let bookingQuery = `
+      SELECT SUM(rooms) as total_booked
+      FROM bookings
+      WHERE status NOT LIKE '%Cancelled%'
+    `;
+    const bookingParams = [];
+    if (hotelId) {
+      bookingQuery += ' AND hotelId = ?';
+      bookingParams.push(String(hotelId));
+    }
+    if (roomId) {
+      bookingQuery += ' AND roomId = ?';
+      bookingParams.push(String(roomId));
+    }
+    if (checkIn && checkOut) {
+      bookingQuery += ' AND checkIn < ? AND checkOut > ?';
+      bookingParams.push(checkOut, checkIn);
+    }
+    const bookingRow = db.prepare(bookingQuery).get(...bookingParams);
+    const confirmedCount = bookingRow?.total_booked ? Number(bookingRow.total_booked) : 0;
+
+    // 2. Active holds younger than 15 minutes
+    const heldCount = getActiveHeldRoomCount({ hotelId, roomId, checkIn, checkOut });
+
+    return {
+      confirmed: confirmedCount,
+      activeHolds: heldCount,
+      totalBlocked: confirmedCount + heldCount
+    };
+  } catch (err) {
+    console.error('[OrderReconciliation] Error in getBookedQuantities:', err);
+    return { confirmed: 0, activeHolds: 0, totalBlocked: 0 };
   }
 }

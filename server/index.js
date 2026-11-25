@@ -13,6 +13,8 @@ import {
   createPendingHold, 
   releasePendingHold, 
   confirmOrderUnified, 
+  getOnlineCheckoutHold,
+  getBookedQuantities,
   reconcilePendingHold, 
   scanAndReconcileUnconfirmedHolds 
 } from './orderReconciliation.js';
@@ -392,6 +394,22 @@ app.delete('/api/rooms/:id', (req, res) => {
     const stmt = db.prepare('DELETE FROM room_types WHERE id = ?');
     stmt.run(req.params.id);
     res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Query room and slot availability taking into account active 15-minute checkout holds
+app.get('/api/availability', (req, res) => {
+  try {
+    const { hotelId, roomId, checkIn, checkOut } = req.query;
+    const stats = getBookedQuantities({ hotelId, roomId, checkIn, checkOut });
+    res.json({
+      success: true,
+      hotelId: hotelId || null,
+      roomId: roomId || null,
+      ...stats
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

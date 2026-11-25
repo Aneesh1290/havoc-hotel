@@ -164,6 +164,7 @@ db.exec(`
     adults INTEGER DEFAULT 1,
     children INTEGER DEFAULT 0,
     notes TEXT,
+    items_json TEXT,
     amount REAL NOT NULL,
     status TEXT DEFAULT 'PENDING', -- PENDING, CONFIRMED, FAILED, EXPIRED, CANCELLED
     gateway_txn_id TEXT,
@@ -173,8 +174,40 @@ db.exec(`
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
+  -- Permanent Checkout Holds Archive for 100% Customer & Order Retention
+  CREATE TABLE IF NOT EXISTS online_checkout_holds_archive (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    merchant_txn_no TEXT NOT NULL,
+    booking_id INTEGER,
+    link_id TEXT,
+    is_payment_link INTEGER DEFAULT 0,
+    hotel_id TEXT,
+    hotel_name TEXT,
+    room_id TEXT,
+    room_name TEXT,
+    rooms_count INTEGER DEFAULT 1,
+    check_in TEXT,
+    check_out TEXT,
+    guest_name TEXT,
+    guest_email TEXT,
+    guest_phone TEXT,
+    adults INTEGER DEFAULT 1,
+    children INTEGER DEFAULT 0,
+    notes TEXT,
+    items_json TEXT,
+    amount REAL NOT NULL,
+    status TEXT, -- PENDING, CONFIRMED, FAILED, EXPIRED, CANCELLED
+    gateway_txn_id TEXT,
+    payment_mode TEXT,
+    archived_reason TEXT,
+    original_created_at TEXT,
+    archived_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE INDEX IF NOT EXISTS idx_payment_gateway_logs_txn ON payment_gateway_logs(merchant_txn_no);
   CREATE INDEX IF NOT EXISTS idx_pending_holds_status ON pending_payment_holds(status, created_at);
+  CREATE INDEX IF NOT EXISTS idx_holds_archive_txn ON online_checkout_holds_archive(merchant_txn_no);
+  CREATE INDEX IF NOT EXISTS idx_holds_archive_phone ON online_checkout_holds_archive(guest_phone);
   CREATE INDEX IF NOT EXISTS idx_bookings_icici ON bookings(iciciOrderId, txnId);
 `);
 
@@ -285,6 +318,10 @@ try {
 // Auto-migrate any legacy misspelled "Banglore" to "Bengaluru, Karnataka"
 try {
   db.prepare("UPDATE properties SET location = 'Bengaluru, Karnataka' WHERE location = 'Banglore'").run();
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE pending_payment_holds ADD COLUMN items_json TEXT");
 } catch (e) {}
 
 export default db;
