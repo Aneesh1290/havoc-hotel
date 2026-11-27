@@ -15,6 +15,7 @@ export default function Admin() {
   const { properties, bookings, inventoryAlerts, addProperty, removeProperty, updateProperty, rooms, addRoomType, removeRoomType, updateRoomType, removeBooking } = useHotels();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('adminToken'));
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
@@ -167,8 +168,6 @@ export default function Admin() {
   const accessibleRooms = isSuperAdmin
     ? rooms
     : rooms.filter(r => allowedPropIds.includes(r.propertyId));
-
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
     <div className="admin-container">
@@ -1687,10 +1686,20 @@ function PropertiesView({ properties, bookings = [], addProperty, removeProperty
   );
 }
 
-function BookingsView({ bookings, properties = [], rooms = [], removeBooking, searchQuery = '' }) {
+function BookingsView({ bookings = [], properties = [], rooms = [], removeBooking, searchQuery = '' }) {
   const [copiedBookingId, setCopiedBookingId] = useState(null);
   const [generatingForId, setGeneratingForId] = useState(null);
   const [viewingBooking, setViewingBooking] = useState(null);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+
+  const safeFormatDate = (dateVal, formatStr = 'dd MMM yyyy') => {
+    if (!dateVal) return '-';
+    try {
+      return format(parseISO(dateVal), formatStr);
+    } catch {
+      return String(dateVal);
+    }
+  };
 
   const handleGenerateBookingLink = async (booking) => {
     setGeneratingForId(booking.id);
@@ -1726,12 +1735,17 @@ function BookingsView({ bookings, properties = [], rooms = [], removeBooking, se
     }
   };
 
-  const filteredBookings = bookings.filter(b => {
-    const q = searchQuery.toLowerCase();
-    return b.name.toLowerCase().includes(q) || 
-           b.hotelName.toLowerCase().includes(q) || 
-           b.id.toString().toLowerCase().includes(q) || 
-           b.status.toLowerCase().includes(q);
+  const filteredBookings = (bookings || []).filter(b => {
+    if (!b) return false;
+    const q = (searchQuery || '').toLowerCase();
+    const nameStr = (b.name || '').toLowerCase();
+    const hotelStr = (b.hotelName || '').toLowerCase();
+    const idStr = (b.id != null ? String(b.id) : '').toLowerCase();
+    const statusStr = (b.status || '').toLowerCase();
+    return nameStr.includes(q) || 
+           hotelStr.includes(q) || 
+           idStr.includes(q) || 
+           statusStr.includes(q);
   });
 
   // If viewing a single booking order detail page (Shopify / Havoc CRM style)
@@ -2167,7 +2181,7 @@ function BookingsView({ bookings, properties = [], rooms = [], removeBooking, se
                     {b.rooms ? `${b.rooms} Room(s)` : '1 Room'} {b.adults ? `• ${b.adults} Adult(s)` : ''}
                   </div>
                 </td>
-                <td data-label="Dates" style={{ ...tdStyle, color: '#4B5563', textAlign: 'right' }}>{format(parseISO(b.checkIn), 'dd MMM yyyy')} - {format(parseISO(b.checkOut), 'dd MMM yyyy')}</td>
+                <td data-label="Dates" style={{ ...tdStyle, color: '#4B5563', textAlign: 'right' }}>{safeFormatDate(b.checkIn)} - {safeFormatDate(b.checkOut)}</td>
                 <td data-label="Amount" style={{ ...tdStyle, fontWeight: 500, textAlign: 'right' }}>
                   <span style={{ fontSize: '1rem', fontWeight: 700, color: '#111827' }}>₹{(b.amount || 0).toLocaleString()}</span>
                   {b.paymentMethod && (
@@ -2318,13 +2332,13 @@ function BookingsView({ bookings, properties = [], rooms = [], removeBooking, se
                   <div>
                     <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>Check-in Date</div>
                     <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#111827', marginTop: 2 }}>
-                      {selectedBooking.checkIn ? format(parseISO(selectedBooking.checkIn), 'dd MMM yyyy, hh:mm a') : '-'}
+                      {safeFormatDate(selectedBooking.checkIn, 'dd MMM yyyy, hh:mm a')}
                     </div>
                   </div>
                   <div>
                     <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>Check-out Date</div>
                     <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#111827', marginTop: 2 }}>
-                      {selectedBooking.checkOut ? format(parseISO(selectedBooking.checkOut), 'dd MMM yyyy, hh:mm a') : '-'}
+                      {safeFormatDate(selectedBooking.checkOut, 'dd MMM yyyy, hh:mm a')}
                     </div>
                   </div>
                 </div>
