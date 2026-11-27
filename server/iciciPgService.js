@@ -48,7 +48,7 @@ export function getConfig() {
 
 /**
  * Generate HMAC SHA-256 Digest as mandated by ICICI Specification:
- * 1. Filter out null, undefined, empty string parameters
+ * 1. Filter out null, undefined, empty string, and boolean false parameters
  * 2. Sort keys alphabetically
  * 3. Concatenate values in alphabetical key order
  * 4. Compute HMAC-SHA256 with merchant key and convert to lowercase hex
@@ -58,7 +58,7 @@ export function generateHmacDigest(payload, key) {
   let plain = '';
   sortedKeys.forEach(k => {
     const val = payload[k];
-    if (val !== null && val !== undefined && val !== '') {
+    if (val !== null && val !== undefined && val !== '' && val !== false) {
       plain += val.toString();
     }
   });
