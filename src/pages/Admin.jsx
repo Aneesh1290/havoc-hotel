@@ -1691,6 +1691,7 @@ function BookingsView({ bookings = [], properties = [], rooms = [], removeBookin
   const [generatingForId, setGeneratingForId] = useState(null);
   const [viewingBooking, setViewingBooking] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [selectedPropertyId, setSelectedPropertyId] = useState('all');
 
   const safeFormatDate = (dateVal, formatStr = 'dd MMM yyyy') => {
     if (!dateVal) return '-';
@@ -1737,6 +1738,15 @@ function BookingsView({ bookings = [], properties = [], rooms = [], removeBookin
 
   const filteredBookings = (bookings || []).filter(b => {
     if (!b) return false;
+    
+    // Property card filter
+    if (selectedPropertyId !== 'all') {
+      const matchId = String(b.hotelId) === String(selectedPropertyId) || String(b.propertyId) === String(selectedPropertyId);
+      const targetProp = properties.find(p => String(p.id) === String(selectedPropertyId));
+      const matchName = targetProp && (b.hotelName || '').toLowerCase().trim() === (targetProp.name || '').toLowerCase().trim();
+      if (!matchId && !matchName) return false;
+    }
+
     const q = (searchQuery || '').toLowerCase();
     const nameStr = (b.name || '').toLowerCase();
     const hotelStr = (b.hotelName || '').toLowerCase();
@@ -2107,15 +2117,23 @@ function BookingsView({ bookings = [], properties = [], rooms = [], removeBookin
     );
   }
 
+  const selectedPropertyObj = properties.find(p => String(p.id) === String(selectedPropertyId));
+
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <h1 style={{ fontSize: '1.8rem', fontWeight: 600, color: '#111827', marginBottom: 4 }}>All Bookings</h1>
-          <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>View and manage all guest reservations.</p>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 600, color: '#111827', marginBottom: 4 }}>
+            {selectedPropertyId === 'all' ? 'All Bookings' : `${selectedPropertyObj?.name || 'Property'} Bookings`}
+          </h1>
+          <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>
+            {selectedPropertyId === 'all' 
+              ? 'Select a property card below to filter reservations, or view all properties.' 
+              : `Showing reservations specifically for ${selectedPropertyObj?.name}.`}
+          </p>
         </div>
         <button
-          onClick={() => exportCorporateHotelExcel({ bookings: filteredBookings, properties, rooms, filterHotel: 'all', filterDate: 'all' })}
+          onClick={() => exportCorporateHotelExcel({ bookings: filteredBookings, properties, rooms, filterHotel: selectedPropertyId, filterDate: 'all' })}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -2132,6 +2150,164 @@ function BookingsView({ bookings = [], properties = [], rooms = [], removeBookin
         >
           <FileSpreadsheet size={16} /> Export to Excel
         </button>
+      </div>
+
+      {/* Property Selector Cards */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', 
+        gap: 16, 
+        marginBottom: 28 
+      }}>
+        {/* "All Properties" Card */}
+        {(() => {
+          const isSelected = selectedPropertyId === 'all';
+          const totalCount = (bookings || []).length;
+          const totalRev = (bookings || []).reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+          return (
+            <div
+              key="all"
+              onClick={() => setSelectedPropertyId('all')}
+              style={{
+                backgroundColor: 'white',
+                borderRadius: 14,
+                padding: '18px 20px',
+                border: isSelected ? '2px solid #2563EB' : '1px solid #E5E7EB',
+                boxShadow: isSelected ? '0 4px 14px rgba(37, 99, 235, 0.15)' : '0 1px 3px rgba(0,0,0,0.04)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
+              {isSelected && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 4,
+                  backgroundColor: '#2563EB'
+                }} />
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ 
+                  width: 40, 
+                  height: 40, 
+                  borderRadius: 10, 
+                  backgroundColor: isSelected ? '#EFF6FF' : '#F3F4F6',
+                  color: isSelected ? '#2563EB' : '#4B5563',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
+                }}>
+                  <Building2 size={20} />
+                </div>
+                <span style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  padding: '3px 8px',
+                  borderRadius: 20,
+                  backgroundColor: isSelected ? '#DBEAFE' : '#F3F4F6',
+                  color: isSelected ? '#1E40AF' : '#4B5563'
+                }}>
+                  {totalCount} Bookings
+                </span>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: isSelected ? '#1E40AF' : '#111827', marginBottom: 4 }}>
+                All Properties
+              </div>
+              <div style={{ fontSize: '0.82rem', color: '#6B7280', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                <span>Total Volume:</span>
+                <span style={{ fontWeight: 700, color: '#111827' }}>₹{totalRev.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Individual Property Cards */}
+        {properties.map(p => {
+          const isSelected = selectedPropertyId === String(p.id);
+          const propBookings = (bookings || []).filter(b => 
+            String(b.hotelId) === String(p.id) || 
+            String(b.propertyId) === String(p.id) || 
+            (b.hotelName && (b.hotelName || '').toLowerCase().trim() === (p.name || '').toLowerCase().trim())
+          );
+          const propCount = propBookings.length;
+          const propRev = propBookings.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+
+          return (
+            <div
+              key={p.id}
+              onClick={() => setSelectedPropertyId(String(p.id))}
+              style={{
+                backgroundColor: 'white',
+                borderRadius: 14,
+                padding: '18px 20px',
+                border: isSelected ? '2px solid #2563EB' : '1px solid #E5E7EB',
+                boxShadow: isSelected ? '0 4px 14px rgba(37, 99, 235, 0.15)' : '0 1px 3px rgba(0,0,0,0.04)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
+              {isSelected && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 4,
+                  backgroundColor: '#2563EB'
+                }} />
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ 
+                  width: 40, 
+                  height: 40, 
+                  borderRadius: 10, 
+                  backgroundColor: isSelected ? '#EFF6FF' : '#F9FAFB',
+                  color: isSelected ? '#2563EB' : '#6B7280',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  border: '1px solid #E5E7EB'
+                }}>
+                  <Building2 size={20} />
+                </div>
+                <span style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  padding: '3px 8px',
+                  borderRadius: 20,
+                  backgroundColor: isSelected ? '#DBEAFE' : '#F3F4F6',
+                  color: isSelected ? '#1E40AF' : '#6B7280'
+                }}>
+                  {propCount} {propCount === 1 ? 'Booking' : 'Bookings'}
+                </span>
+              </div>
+              <div style={{ 
+                fontWeight: 700, 
+                fontSize: '1.02rem', 
+                color: isSelected ? '#1E40AF' : '#111827', 
+                marginBottom: 4,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }} title={p.name}>
+                {p.name}
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#9CA3AF', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <MapPin size={12} /> {p.location || 'Sabharwal Hotels'}
+              </div>
+              <div style={{ fontSize: '0.82rem', color: '#6B7280', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTop: '1px dashed #F3F4F6' }}>
+                <span>Collected:</span>
+                <span style={{ fontWeight: 700, color: '#111827' }}>₹{propRev.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div style={{ backgroundColor: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
